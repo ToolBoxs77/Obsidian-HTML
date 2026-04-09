@@ -1,199 +1,42 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Git 工作流視覺化</title>
 <style>
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background-color: #1e1e1e;
-    color: #e0e0e0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 20px;
-    margin: 0;
-  }
-  .container {
-    background-color: #2d2d2d;
-    padding: 30px;
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-    max-width: 800px;
-    width: 100%;
-  }
-  .zones-wrapper {
-    display: flex;
-    justify-content: space-between;
-    gap: 15px;
-    margin-bottom: 30px;
-  }
-  .zone {
-    flex: 1;
-    background-color: #3a3a4a;
-    border-radius: 10px;
-    padding: 20px;
-    text-align: center;
-    border: 2px solid transparent;
-    transition: all 0.3s ease;
-  }
-  .zone h3 { margin-top: 0; font-size: 16px; color: #a0a0b0; }
-  .zone p { font-size: 14px; margin-bottom: 5px; }
-  .value-display {
-    font-size: 28px;
-    font-weight: bold;
-    padding: 10px;
-    background: rgba(0,0,0,0.2);
-    border-radius: 8px;
-    display: inline-block;
-    min-width: 60px;
-  }
-  .highlight { border-color: #4facfe; box-shadow: 0 0 15px rgba(79, 172, 254, 0.4); }
-  
-  .controls {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr; /* 三欄排版 */
-    gap: 10px;
-    margin-bottom: 20px;
-  }
-  button {
-    background-color: #4a4a5a;
-    color: white;
-    border: none;
-    padding: 12px;
-    border-radius: 8px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-  button:hover { background-color: #5a5a6a; }
-  button:active { transform: scale(0.98); }
-  
-  /* 特殊按鈕顏色標示 */
-  .btn-simulate { background-color: #f0ad4e; color: #333; font-weight: bold; }
-  .btn-simulate:hover { background-color: #ec971f; }
-  .btn-reset { background-color: #d9534f; } 
-  .btn-reset:hover { background-color: #c9302c; }
-
-  .status-bar {
-    background-color: #1a1a1a;
-    padding: 15px;
-    border-radius: 8px;
-    border-left: 5px solid #4facfe;
-    font-size: 15px;
-    line-height: 1.5;
-  }
-  .error-text { color: #ff6b6b; }
-  .success-text { color: #51cf66; }
-  .warning-text { color: #f0ad4e; }
+  body { background: #222; color: white; text-align: center; font-family: sans-serif; }
+  .box { border: 1px solid #555; padding: 10px; margin: 10px; display: inline-block; min-width: 80px; }
+  button { padding: 10px; margin: 5px; cursor: pointer; background: #444; color: white; border: 1px solid #666; }
+  #msg { color: #f0ad4e; margin: 15px; min-height: 20px; }
 </style>
 </head>
 <body>
-
-<div class="container">
-  <h2 style="margin-top: 0; text-align: center;">Git 工作流視覺化 (修正版)</h2>
-  
-  <div class="zones-wrapper">
-    <div class="zone" id="zone-workspace">
-      <h3>工作區<br><small>(手機/電腦畫面)</small></h3>
-      <p>未存檔修改</p>
-      <div class="value-display" id="val-workspace" style="color:#ff9800;">0</div>
-    </div>
-    <div class="zone" id="zone-local">
-      <h3>地端倉庫<br><small>(.git隱藏大腦)</small></h3>
-      <p>版本</p>
-      <div class="value-display" id="val-local">v1</div>
-    </div>
-    <div class="zone" id="zone-remote">
-      <h3>雲端倉庫<br><small>(GitHub)</small></h3>
-      <p>版本</p>
-      <div class="value-display" id="val-remote">v1</div>
-    </div>
+  <h3>Git 邏輯測試版</h3>
+  <div>
+    <div class="box">工作區: <b id="ws">0</b></div>
+    <div class="box">地端: <b id="loc">v1</b></div>
+    <div class="box">雲端: <b id="rem">v1</b></div>
   </div>
+  <hr>
+  <button onclick="edit()">修改筆記</button>
+  <button onclick="commit()">Commit</button>
+  <button onclick="push()">Push</button>
+  <button onclick="sim()">同事上傳</button>
+  <button onclick="pull()">Pull</button>
+  <div id="msg">等待操作...</div>
 
-  <div class="controls">
-    <button onclick="edit()">1. 修改筆記 (Edit)</button>
-    <button onclick="commit()">2. Commit (打包存檔)</button>
-    <button onclick="push()">3. Push (發射上雲)</button>
-    
-    <button onclick="simulateTeammate()" class="btn-simulate">☁️ 模擬同事上傳 (生出新版)</button>
-    <button onclick="pull()">⬇️ Pull (降落接收)</button>
-    <button onclick="resetAll()" class="btn-reset">🔄 重置系統 (Reset)</button>
-  </div>
-
-  <div class="status-bar" id="status-text">
-    歡迎使用！請嘗試修改筆記，或點擊「模擬同事上傳」來測試 Pull 功能。
-  </div>
-</div>
-
-<script>
-  let workspaceChanges = 0;
-  let localVersion = 1;
-  let remoteVersion = 1;
-
-  const uiWorkspace = document.getElementById('val-workspace');
-  const uiLocal = document.getElementById('val-local');
-  const uiRemote = document.getElementById('val-remote');
-  const statusText = document.getElementById('status-text');
-
-  function updateUI() {
-    uiWorkspace.innerText = workspaceChanges;
-    uiLocal.innerText = 'v' + localVersion;
-    uiRemote.innerText = 'v' + remoteVersion;
-    
-    // 同步狀態檢查：如果地端和雲端版本一樣，且工作區沒東西，就亮起藍色邊框
-    if(localVersion === remoteVersion && workspaceChanges === 0) {
-      document.getElementById('zone-remote').classList.add('highlight');
-      document.getElementById('zone-local').classList.add('highlight');
-    } else {
-      document.getElementById('zone-remote').classList.remove('highlight');
-      document.getElementById('zone-local').classList.remove('highlight');
+  <script>
+    let ws=0, loc=1, rem=1;
+    function update() {
+      document.getElementById('ws').innerText = ws;
+      document.getElementById('loc').innerText = 'v' + loc;
+      document.getElementById('rem').innerText = 'v' + rem;
     }
-  }
-
-  function edit() {
-    workspaceChanges++;
-    statusText.innerHTML = "您在工作區修改了檔案，但還沒 Commit，雲端完全不知道。";
-    updateUI();
-  }
-
-  function commit() {
-    if (workspaceChanges > 0) {
-      localVersion++;
-      workspaceChanges = 0;
-      statusText.innerHTML = "<span class='success-text'>Commit 成功！包裹已打好，儲存在地端倉庫，等待發射。</span>";
-    } else {
-      statusText.innerHTML = "沒有未存檔的修改可供 Commit。";
-    }
-    updateUI();
-  }
-
-  function push() {
-    if (workspaceChanges > 0) {
-       statusText.innerHTML = "<span class='error-text'>錯誤：工作區還有未打好的包裹，請先 Commit！</span>";
-    } else if (localVersion > remoteVersion) {
-      remoteVersion = localVersion;
-      statusText.innerHTML = "<span class='success-text'>Push 成功！時空已完美同步至 GitHub。</span>";
-    } else {
-      statusText.innerHTML = "✅ 地端與雲端進度一致，目前沒有需要 Push 的新版本。";
-    }
-    updateUI();
-  }
-
-  // 新增：模擬遠端有別人 Push 了新東西
-  function simulateTeammate() {
-    remoteVersion++;
-    statusText.innerHTML = "<span class='warning-text'>⚠️ 警告：雲端倉庫出現了新版本 (v" + remoteVersion + ")！這可能是您的同事剛 Push 的進度，請記得 Pull。</span>";
-    updateUI();
-  }
-
-  // 修正：Pull 現在會先做邏輯判斷
-  function pull() {
-    if (remoteVersion > localVersion) {
-      localVersion = remoteVersion;
-      // 真實情況下 pull 也會更新工作區，這裡為了簡化視覺，我們把未存檔修改清零代表覆蓋
-      workspaceChanges = 0; 
-      statusText.innerHTML = "<span class='success-text'>Pull 成功！已從雲端下載最新版本 (v" + remoteVersion + ") 並同步至您的電腦。</span>";
-    } else {
-      statusText.innerHTML = "✅ 目前地端已是最新版本，雲端沒有新資料
+    function edit() { ws++; update(); msg("您修改了檔案"); }
+    function commit() { if(ws>0){loc++; ws=0; update(); msg("Commit 成功");} else {msg("沒東西可存");} }
+    function push() { if(loc>rem && ws==0){rem=loc; update(); msg("Push 成功");} else {msg("無法 Push (檢查 Commit 了沒)");} }
+    function sim() { rem++; update(); msg("警告：雲端有新版 v" + rem); }
+    function pull() { if(rem>loc){loc=rem; ws=0; update(); msg("Pull 成功");} else {msg("已是最新版");} }
+    function msg(t) { document.getElementById('msg').innerText = t; }
+  </script>
+</body>
+</html>
