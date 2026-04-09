@@ -53,7 +53,7 @@
   
   .controls {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr; /* 改為三欄排版 */
+    grid-template-columns: 1fr 1fr 1fr; /* 三欄排版 */
     gap: 10px;
     margin-bottom: 20px;
   }
@@ -63,15 +63,17 @@
     border: none;
     padding: 12px;
     border-radius: 8px;
-    font-size: 15px;
+    font-size: 14px;
     cursor: pointer;
     transition: background 0.2s;
   }
   button:hover { background-color: #5a5a6a; }
   button:active { transform: scale(0.98); }
   
-  /* 特別標示重置按鈕為紅色 */
-  .btn-reset { background-color: #d9534f; grid-column: span 3; } 
+  /* 特殊按鈕顏色標示 */
+  .btn-simulate { background-color: #f0ad4e; color: #333; font-weight: bold; }
+  .btn-simulate:hover { background-color: #ec971f; }
+  .btn-reset { background-color: #d9534f; } 
   .btn-reset:hover { background-color: #c9302c; }
 
   .status-bar {
@@ -84,12 +86,13 @@
   }
   .error-text { color: #ff6b6b; }
   .success-text { color: #51cf66; }
+  .warning-text { color: #f0ad4e; }
 </style>
 </head>
 <body>
 
 <div class="container">
-  <h2 style="margin-top: 0; text-align: center;">Git 工作流視覺化</h2>
+  <h2 style="margin-top: 0; text-align: center;">Git 工作流視覺化 (修正版)</h2>
   
   <div class="zones-wrapper">
     <div class="zone" id="zone-workspace">
@@ -113,12 +116,14 @@
     <button onclick="edit()">1. 修改筆記 (Edit)</button>
     <button onclick="commit()">2. Commit (打包存檔)</button>
     <button onclick="push()">3. Push (發射上雲)</button>
-    <button onclick="pull()" style="grid-column: span 3;">Pull (模擬雲端有新版本並抓取)</button>
+    
+    <button onclick="simulateTeammate()" class="btn-simulate">☁️ 模擬同事上傳 (生出新版)</button>
+    <button onclick="pull()">⬇️ Pull (降落接收)</button>
     <button onclick="resetAll()" class="btn-reset">🔄 重置系統 (Reset)</button>
   </div>
 
   <div class="status-bar" id="status-text">
-    歡迎使用！請點擊上方按鈕開始模擬 Git 操作。
+    歡迎使用！請嘗試修改筆記，或點擊「模擬同事上傳」來測試 Pull 功能。
   </div>
 </div>
 
@@ -171,30 +176,24 @@
       remoteVersion = localVersion;
       statusText.innerHTML = "<span class='success-text'>Push 成功！時空已完美同步至 GitHub。</span>";
     } else {
-      statusText.innerHTML = "目前沒有需要 Push 的新版本。";
+      statusText.innerHTML = "✅ 地端與雲端進度一致，目前沒有需要 Push 的新版本。";
     }
     updateUI();
   }
 
+  // 新增：模擬遠端有別人 Push 了新東西
+  function simulateTeammate() {
+    remoteVersion++;
+    statusText.innerHTML = "<span class='warning-text'>⚠️ 警告：雲端倉庫出現了新版本 (v" + remoteVersion + ")！這可能是您的同事剛 Push 的進度，請記得 Pull。</span>";
+    updateUI();
+  }
+
+  // 修正：Pull 現在會先做邏輯判斷
   function pull() {
-    remoteVersion++; 
-    localVersion = remoteVersion;
-    workspaceChanges = 0;
-    statusText.innerHTML = "<span class='success-text'>Pull 成功！已從雲端抓取最新版本 (v" + remoteVersion + ") 並同步至地端與工作區。</span>";
-    updateUI();
-  }
-
-  function resetAll() {
-    workspaceChanges = 0;
-    localVersion = 1;
-    remoteVersion = 1;
-    statusText.innerHTML = "🔄 系統已重置，一切回到初始狀態。";
-    updateUI();
-  }
-
-  // 初始化畫面
-  updateUI();
-</script>
-
-</body>
-</html>
+    if (remoteVersion > localVersion) {
+      localVersion = remoteVersion;
+      // 真實情況下 pull 也會更新工作區，這裡為了簡化視覺，我們把未存檔修改清零代表覆蓋
+      workspaceChanges = 0; 
+      statusText.innerHTML = "<span class='success-text'>Pull 成功！已從雲端下載最新版本 (v" + remoteVersion + ") 並同步至您的電腦。</span>";
+    } else {
+      statusText.innerHTML = "✅ 目前地端已是最新版本，雲端沒有新資料
