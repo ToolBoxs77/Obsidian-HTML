@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<style>
+  body { font-family: sans-serif; background-color: #202020; color: #eee; text-align: center; padding: 20px; }
+  .zones { display: flex; justify-content: center; gap: 20px; margin: 30px 0; }
+  .box { border: 2px solid #555; border-radius: 10px; padding: 20px; width: 150px; background-color: #333; }
+  button { background-color: #4CAF50; color: white; border: none; padding: 10px 15px; margin: 5px; border-radius: 5px; cursor: pointer; font-size: 14px; }
+  button:hover { background-color: #45a049; }
+  #status { margin-top: 20px; font-weight: bold; color: #ffeb3b; }
+</style>
+</head>
+<body>
+
+  <h2>Git 工作流模擬</h2>
+  
+  <div class="zones">
+    <div class="box" id="workspace">
+      <h3>工作區</h3>
+      <p>未存檔修改: <br><span id="ws-val" style="font-size:24px; color:#ff9800;">0</span></p>
+    </div>
+    <div class="box" id="local">
+      <h3>本地倉庫</h3>
+      <p>版本: <br><span style="font-size:24px;">V<span id="loc-val">1</span></span></p>
+    </div>
+    <div class="box" id="remote">
+      <h3>雲端倉庫</h3>
+      <p>版本: <br><span style="font-size:24px;">V<span id="rem-val">1</span></span></p>
+    </div>
+  </div>
+
+  <div>
+    <button onclick="actionEdit()">修改筆記 (Edit)</button>
+    <button onclick="actionCommit()">打包存檔 (Commit)</button>
+    <button onclick="actionPush()">發射上雲 (Push)</button>
+  </div>
+
+  <div id="status">狀態：一切準備就緒。</div>
+
+  <script>
+    let ws = 0, loc = 1, rem = 1;
+    const statEl = document.getElementById('status');
+    const updateUI = () => {
+      document.getElementById('ws-val').innerText = ws;
+      document.getElementById('loc-val').innerText = loc;
+      document.getElementById('rem-val').innerText = rem;
+    };
+
+    function actionEdit() {
+      ws++; statEl.innerText = "狀態：您在工作區修改了檔案，尚未 Commit！"; updateUI();
+    }
+    function actionCommit() {
+      if(ws > 0) { loc++; ws=0; statEl.innerText = "狀態：Commit 成功！變更已記錄到本地倉庫。"; updateUI(); }
+      else { statEl.innerText = "狀態：沒有未存檔的修改可供 Commit。"; }
+    }
+    function actionPush() {
+      if(loc > rem) { rem = loc; statEl.innerText = "狀態：Push 成功！雲端倉庫已完美同步。"; updateUI(); }
+      else { statEl.innerText = "狀態：本地與雲端已是最新狀態，無需 Push。"; }
+    }
+  </script>
+
+</body>
+</html>
