@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<style>
+  body { font-family: sans-serif; background: #1a1a1a; color: #fff; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+  .container { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 15px; }
+  
+  /* 區域基礎樣式 */
+  .area { border: 2px solid #444; border-radius: 12px; padding: 15px; position: relative; transition: all 0.3s; background: #252525; }
+  .area h3 { margin: 0 0 10px 0; font-size: 16px; color: #aaa; text-align: center; }
+  
+  /* 檔案圖示樣式 */
+  .file-node { 
+    background: #4a4a4a; padding: 8px 12px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; margin: 5px auto; width: fit-content; border: 1px solid #666; transition: all 0.5s;
+  }
+  .file-node.changed { background: #d9822b; border-color: #ff9800; animation: pulse 1s infinite; }
+  .file-node.ignored { opacity: 0.5; border-style: dashed; }
+  .file-node.deleted { transform: scale(0); opacity: 0; }
+
+  /* 垂直箭頭 */
+  .arrow { text-align: center; font-size: 24px; color: #666; margin: -5px 0; }
+
+  /* 按鈕樣式 */
+  .controls { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 20px; width: 100%; }
+  button { padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; background: #3d3d3d; color: #fff; }
+  button:hover { background: #4d4d4d; }
+  .btn-primary { background: #2188ff; }
+  .btn-danger { background: #d73a49; }
+  
+  #status-log { margin-top: 20px; padding: 12px; background: #000; border-radius: 6px; font-size: 14px; color: #0f0; width: 100%; box-sizing: border-box; }
+
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(217, 130, 43, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(217, 130, 43, 0); } 100% { box-shadow: 0 0 0 0 rgba(217, 130, 43, 0); } }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Git 狀態機模擬器</h2>
+
+  <div class="area" id="area-disk">
+    <h3>1. 物理硬碟 (Physical Disk)</h3>
+    <div id="file-disk" class="file-node">📄 dify_hook_log.txt</div>
+  </div>
+
+  <div class="arrow">↓</div>
+
+  <div class="area" id="area-staging">
+    <h3>2. Git 監控區 (Staging/Index)</h3>
+    <div id="file-staging" class="file-node">📄 dify_hook_log.txt</div>
+  </div>
+
+  <div class="arrow">↓</div>
+
+  <div class="area" id="area-remote">
+    <h3>3. 雲端倉庫 (Remote Repo)</h3>
+    <div id="file-remote" class="file-node">📄 dify_hook_log.txt</div>
+  </div>
+
+  <div class="controls">
+    <button class="btn-primary" onclick="writeLog()">A: Dify 腳本寫入日誌</button>
+    <button class="btn-danger" onclick="rmCached()">B: 執行 git rm --cached</button>
+    <button onclick="addIgnore()">C: 加入 .gitignore</button>
+    <button onclick="resetSim()" style="margin-top:10px; opacity:0.6;">🔄 重置模擬器</button>
+  </div>
+
+  <div id="status-log">系統就緒。檔案目前被 Git 完整追蹤中。</div>
+</div>
+
+<script>
+  let isTracked = true;
+  let isIgnored = false;
+  const log = (msg) => document.getElementById('status-log').innerText = "> " + msg;
+
+  function writeLog() {
+    const diskNode = document.getElementById('file-disk');
+    const stageNode = document.getElementById('file-staging');
+    
+    // 物理硬碟檔案永遠會變化
+    diskNode.classList.add('changed');
+    setTimeout(() => diskNode.classList.remove('changed'), 1000);
+
+    if (isTracked) {
+      stageNode.classList.add('changed');
+      log("偵測到變更！Git 監控區已標記該檔案為 Modified。");
+      setTimeout(() => stageNode.classList.remove('changed'), 1000);
+    } else {
+      log("日誌已更新，但 Git 已停止監控此檔案，監控區無反應。");
+    }
+  }
+
+  function rmCached() {
+    if (!isTracked) return log("檔案已經不在監控區了。");
+    
+    isTracked = false;
+    document.getElementById('file-staging').classList.add('deleted');
+    log("執行 git rm --cached 成功！監控區已移除追蹤，但硬碟檔案完好如初。");
+  }
+
+  function addIgnore() {
+    isIgnored = true;
+    document.getElementById('file-disk').classList.add('ignored');
+    log("已將 .gitignore 加入。未來的日誌更新將徹底被 Git 忽略。");
+  }
+
+  function resetSim() {
+    isTracked = true;
+    isIgnored = false;
+    document.getElementById('file-staging').classList.remove('deleted');
+    document.getElementById('file-disk').classList.remove('ignored');
+    log("模擬器已重置。");
+  }
+</script>
+
+</body>
+</html>
