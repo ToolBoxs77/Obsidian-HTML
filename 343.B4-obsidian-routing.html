@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Obsidian 前端分流與 Dify 後端樞紐</title>
+<style>
+  :root {
+    --bg-color: #121212;
+    --card-bg: #1e1e1e;
+    --obsidian: #7a3ee8;
+    --gemini: #4285f4;
+    --dify: #f59e0b;
+    --text-main: #e0e0e0;
+    --text-muted: #888;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-color); color: var(--text-main); display: flex; justify-content: center; padding: 20px; margin: 0; }
+  .container { width: 100%; max-width: 750px; background: var(--card-bg); padding: 25px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); }
+  
+  /* 頂部控制區 */
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px; }
+  .controls select { padding: 8px 12px; border-radius: 6px; background: #2d2d2d; color: white; border: 1px solid #555; font-size: 15px; cursor: pointer; }
+  
+  /* 畫布區 */
+  .canvas { position: relative; height: 380px; background: #181818; border-radius: 8px; border: 1px solid #333; overflow: hidden; margin-bottom: 20px; }
+  
+  /* 節點樣式 */
+  .node { position: absolute; padding: 12px 15px; border-radius: 8px; font-weight: bold; font-size: 14px; text-align: center; border: 2px solid transparent; z-index: 2; transition: all 0.3s; background: #252525; }
+  .node.active { transform: scale(1.05); box-shadow: 0 0 15px rgba(255,255,255,0.2); }
+  
+  #node-phone { left: 40px; top: 150px; border-color: var(--obsidian); }
+  #node-cloud { right: 40px; top: 50px; border-color: var(--gemini); }
+  #node-dify { right: 180px; top: 250px; border-color: var(--dify); }
+  #node-db { right: 40px; top: 250px; border-style: dashed; border-color: #aaa; color: #aaa; font-size: 12px; }
+  .db-active { border-color: var(--dify) !important; color: var(--dify) !important; animation: pulse 1s infinite; }
+
+  /* 生成的檔案與標籤 */
+  #node-file { left: 40px; top: 230px; background: #2d3748; color: #63b3ed; font-size: 13px; border: 1px solid #4a5568; display: none; }
+  #node-github { left: 40px; top: 290px; background: #27272a; color: #a1a1aa; font-size: 12px; border: 1px dashed #52525b; display: none; }
+
+  /* 連線標籤 */
+  .path-label { position: absolute; font-size: 11px; color: #888; background: #181818; padding: 2px 6px; border-radius: 4px; z-index: 1; }
+  #label-api { left: 280px; top: 90px; }
+  #label-tailscale { left: 240px; top: 210px; }
+
+  /* 動畫封包 */
+  #packet { position: absolute; width: 14px; height: 14px; background: white; border-radius: 50%; box-shadow: 0 0 12px white; z-index: 10; display: none; transition: all linear; }
+
+  /* 底部按鈕與狀態列 */
+  .actions { display: flex; gap: 10px; }
+  button { padding: 12px 20px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 15px; }
+  .btn-send { background: var(--obsidian); color: white; flex: 1; }
+  .btn-send:hover { background: #6b33cc; }
+  .btn-reset { background: #444; color: white; }
+  .btn-reset:hover { background: #555; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  #status-box { margin-top: 15px; padding: 15px; background: #000; border-radius: 8px; border-left: 4px solid var(--obsidian); font-size: 14px; line-height: 1.5; color: #4ade80; min-height: 45px; }
+
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); } 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h3 style="margin:0;">架構可視化：前端分流邏輯</h3>
+    <div class="controls">
+      <select id="channel-select" onchange="resetSim()">
+        <option value="global">🌍 廣域大腦 (直連 API)</option>
+        <option value="cao">🔒 CAO 專利專家 (連線母艦 Dify)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="canvas">
+    <svg width="100%" height="100%" style="position:absolute; top:0; left:0; z-index:0;">
+      <line x1="100" y1="170" x2="520" y2="70" stroke="#333" stroke-width="2" stroke-dasharray="5,5" />
+      <line x1="100" y1="180" x2="420" y2="270" stroke="#333" stroke-width="2" stroke-dasharray="5,5" />
+      <line x1="480" y1="270" x2="560" y2="270" stroke="#333" stroke-width="2" />
+    </svg>
+
+    <div class="node" id="node-phone">📱 Obsidian App<br><small>(S24 Ultra)</small></div>
+    <div class="node" id="node-cloud">🌍 雲端 AI<br><small>(Gemini API)</small></div>
+    <div class="node" id="node-dify">🔒 128GB 母艦<br><small>(Dify Server)</small></div>
+    <div class="node" id="node-db">🗄️ FTO 知識庫<br><small>(2筆專利)</small></div>
+    
+    <div class="path-label" id="label-api">網際網路直連</div>
+    <div class="path-label" id="label-tailscale">Tailscale 隧道</div>
+
+    <div class="node" id="node-file">📄 <span id="file-name">通用對話.md</span></div>
+    <div class="node" id="node-github">🔄 自動同步至 GitHub</div>
+
+    <div id="packet"></div>
+  </div>
+
+  <div class="actions">
+    <button id="btn-send" class="btn-send" onclick="startFlow()">發送訊號</button>
+    <button class="btn-reset" onclick="resetSim()">🔄 重置</button>
+  </div>
+
+  <div id="status-box">準備就緒。請選擇通道並發送訊號。</div>
+</div>
+
+<script>
+  const packet = document.getElementById('packet');
+  const statusBox = document.getElementById('status-box');
+  const channelSelect = document.getElementById('channel-select');
+  const btnSend = document.getElementById('btn-send');
+  
+  // UI Elements
+  const nodePhone = document.getElementById('node-phone');
+  const nodeCloud = document.getElementById('node-cloud');
+  const nodeDify = document.getElementById('node-dify');
+  const nodeDb = document.getElementById('node-db');
+  const nodeFile = document.getElementById('node-file');
+  const fileName = document.getElementById('file-name');
+  const nodeGithub = document.getElementById('node-github');
+
+  // Center coordinates for packet animation
+  const pos = {
+    phone: { x: 100, y: 170 },
+    cloud: { x: 520, y: 70 },
+    dify: { x: 420, y: 270 }
+  };
+
+  function setStatus(msg) { statusBox.innerHTML = msg; }
+
+  function resetSim() {
+    packet.style.display = 'none';
+    packet.style.transition = 'none';
+    btnSend.disabled = false;
+    
+    // 移除所有發亮狀態
+    nodeCloud.classList.remove('active');
+    nodeDify.classList.remove('active');
+    nodeDb.classList.remove('db-active');
+    
+    // 隱藏產生的檔案與 GitHub 標籤
+    nodeFile.style.display = 'none';
+    nodeGithub.style.display = 'none';
+    
+    setStatus(`系統已重置。目前選擇模式：<b>${channelSelect.options[channelSelect.selectedIndex].text}</b>`);
+  }
+
+  async function movePacket(from, to, durationSec, color) {
+    packet.style.display = 'block';
+    packet.style.transition = 'none';
+    packet.style.left = (from.x - 7) + 'px'; // -7 to center the 14px dot
+    packet.style.top = (from.y - 7) + 'px';
+    packet.style.background = color;
+    packet.style.boxShadow = `0 0 12px ${color}`;
+    
+    await new Promise(r => setTimeout(r, 50)); // Force layout calc
+    
+    packet.style.transition = `all ${durationSec}s cubic-bezier(0.4, 0, 0.2, 1)`;
+    packet.style.left = (to.x - 7) + 'px';
+    packet.style.top = (to.y - 7) + 'px';
+    
+    await new Promise(r => setTimeout(r, durationSec * 1000));
+  }
+
+  async function startFlow() {
+    btnSend.disabled = true;
+    const mode = channelSelect.value;
+
+    if (mode === 'global') {
+      // 廣域大腦流程
+      setStatus("訊號發送中：手機直連雲端 AI...");
+      nodePhone.classList.add('active');
+      
+      await movePacket(pos.phone, pos.cloud, 0.8, '#4285f4'); // Blue packet
+      
+      nodePhone.classList.remove('active');
+      nodeCloud.classList.add('active');
+      setStatus("雲端處理中...");
+      await new Promise(r => setTimeout(r, 600));
+      
+      setStatus("回傳結果...");
+      await movePacket(pos.cloud, pos.phone, 0.8, '#4285f4');
+      packet.style.display = 'none';
+      nodeCloud.classList.remove('active');
+      
+      // 顯示結果
+      fileName.innerText = "通用對話.md";
+      nodeFile.style.display = 'block';
+      await new Promise(r => setTimeout(r, 400));
+      nodeGithub.style.display = 'block';
+      
+      setStatus("<b>這是不受限的世界知識，適合一般諮詢與創意發想。</b>");
+
+    } else if (mode === 'cao') {
+      // CAO 專利專家流程
+      setStatus("訊號發送中：穿過 Tailscale 隧道前往母艦...");
+      nodePhone.classList.add('active');
+      
+      await movePacket(pos.phone, pos.dify, 1.0, '#f59e0b'); // Orange packet
+      
+      nodePhone.classList.remove('active');
+      nodeDify.classList.add('active');
+      packet.style.display = 'none';
+      
+      setStatus("Dify 正在檢索 <b>FTO 知識庫 (2筆專利)</b>...");
+      nodeDb.classList.add('db-active'); // DB starts pulsing
+      await new Promise(r => setTimeout(r, 1500)); // Simulate DB search
+      
+      nodeDb.classList.remove('db-active');
+      setStatus("檢索完畢，母艦回傳分析結果...");
+      
+      await movePacket(pos.dify, pos.phone, 1.0, '#f59e0b');
+      packet.style.display = 'none';
+      nodeDify.classList.remove('active');
+      
+      // 顯示結果
+      fileName.innerText = "專利分析.md";
+      nodeFile.style.borderLeft = "4px solid #f59e0b"; // Highlight strict data
+      nodeFile.style.display = 'block';
+      await new Promise(r => setTimeout(r, 400));
+      nodeGithub.style.display = 'block';
+      
+      setStatus("<b>這是受限的專業知識，嚴格基於專利庫內容回覆，用於 FTO 侵權判定。</b>");
+    }
+    
+    btnSend.disabled = false;
+  }
+
+  // 初始化狀態
+  resetSim();
+</script>
+
+</body>
+</html>
