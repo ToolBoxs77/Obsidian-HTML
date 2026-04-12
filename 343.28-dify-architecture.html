@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>架構對比：Standalone API vs Dify 工作流</title>
+<style>
+  :root {
+    --bg: #121212;
+    --card-bg: #1e1e2e;
+    --text: #e0e0e0;
+    --obsidian: #8b5cf6;
+    --dify: #f59e0b;
+    --api: #10b981;
+    --line: #475569;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; padding: 20px; margin: 0; }
+  .container { width: 100%; max-width: 850px; background: var(--card-bg); padding: 25px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.6); }
+  
+  /* 頂部控制列 */
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 15px; }
+  .controls select { padding: 10px; border-radius: 6px; background: #2a2a35; color: white; border: 1px solid #555; font-size: 15px; cursor: pointer; font-weight: bold; }
+  
+  /* 畫布與三欄佈局 */
+  .canvas { position: relative; height: 400px; background: #181825; border-radius: 8px; border: 1px solid #333; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; padding: 0 40px; overflow: hidden; }
+  
+  /* 節點通用樣式 */
+  .node { padding: 12px 18px; border-radius: 8px; font-weight: bold; text-align: center; background: #252535; z-index: 2; position: relative; border: 2px solid transparent; transition: 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+  .node small { display: block; font-size: 12px; font-weight: normal; color: #aaa; margin-top: 4px; }
+  .node.active { transform: scale(1.05); }
+
+  /* 三大核心節點 */
+  #node-mobile { border-color: var(--obsidian); }
+  #node-api { border-color: var(--api); }
+  
+  /* Dify 樞紐專屬區域 */
+  .hub-container { display: flex; flex-direction: column; align-items: center; gap: 15px; position: relative; transition: 0.3s; }
+  #node-dify { border-color: var(--dify); padding: 15px 30px; font-size: 16px; background: #2d2418; }
+  
+  /* Dify 內部子工具 */
+  .sub-tools { display: flex; gap: 10px; opacity: 1; transition: 0.3s; }
+  .sub-node { font-size: 11px; padding: 6px 10px; background: #333; border: 1px dashed var(--dify); border-radius: 6px; color: #fcd34d; transition: 0.3s; }
+  .sub-node.pulse { background: var(--dify); color: #000; box-shadow: 0 0 10px var(--dify); }
+
+  /* 關閉模式時的樣式 (隱藏 Dify) */
+  .mode-standalone .hub-container { opacity: 0.2; filter: grayscale(100%); }
+  
+  /* SVG 連線 */
+  svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+  .path-line { stroke: var(--line); stroke-width: 2; stroke-dasharray: 5,5; fill: none; transition: 0.3s; }
+  .path-active { stroke: #fff; stroke-width: 3; stroke-dasharray: none; filter: drop-shadow(0 0 5px rgba(255,255,255,0.5)); }
+
+  /* 動畫封包 */
+  #packet { position: absolute; width: 14px; height: 14px; background: white; border-radius: 50%; box-shadow: 0 0 12px white; z-index: 10; display: none; margin-top: -7px; margin-left: -7px; }
+
+  /* 底部按鈕與狀態 */
+  .actions { display: flex; gap: 10px; }
+  button { padding: 12px 20px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 15px; }
+  .btn-send { background: var(--obsidian); color: white; flex: 1; }
+  .btn-send:hover { background: #7c3aed; }
+  .btn-reset { background: #475569; color: white; }
+  .btn-reset:hover { background: #334155; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  #status-box { margin-top: 15px; padding: 15px; background: #000; border-radius: 8px; border-left: 4px solid var(--obsidian); font-size: 14px; line-height: 1.6; color: #4ade80; min-height: 50px; }
+
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h3 style="margin:0;">系統架構模式 (System Architecture Mode)</h3>
+    <div class="controls">
+      <select id="mode-select" onchange="resetSim()">
+        <option value="standalone">傳統直連模式 (Standalone API - 獨立戶)</option>
+        <option value="cao" selected>CAO 中樞模式 (Dify Workflow - 工作流樞紐)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="canvas" id="canvas-area">
+    <svg>
+      <path id="line-direct" class="path-line" d="" />
+      <path id="line-to-dify" class="path-line" d="" />
+      <path id="line-from-dify" class="path-line" d="" />
+    </svg>
+
+    <div id="packet"></div>
+
+    <div class="node" id="node-mobile">
+      📱 行動端<br><small>S24 Ultra (Obsidian)</small>
+    </div>
+
+    <div class="hub-container" id="hub-zone">
+      <div class="sub-tools" id="sub-tools">
+        <div class="sub-node" id="tool-prompt">⚙️ 系統級 Prompt 注入</div>
+        <div class="sub-node" id="tool-rag">📚 RAG 知識庫</div>
+        <div class="sub-node" id="tool-search">🔍 Google 搜尋工具</div>
+      </div>
+      <div class="node" id="node-dify">
+        🧠 雲端/地端中樞<br><small>128GB 母艦 (Dify)</small>
+      </div>
+    </div>
+
+    <div class="node" id="node-api">
+      ⚡ 外部算力與工具<br><small>Claude / Gemini API</small>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button id="btn-send" class="btn-send" onclick="startFlow()">發送提問 (Send Query)</button>
+    <button class="btn-reset" onclick="resetSim()">🔄 重置系統</button>
+  </div>
+
+  <div id="status-box">請點擊「發送提問」觀看資料流向。</div>
+</div>
+
+<script>
+  const modeSelect = document.getElementById('mode-select');
+  const canvasArea = document.getElementById('canvas-area');
+  const btnSend = document.getElementById('btn-send');
+  const statusBox = document.getElementById('status-box');
+  const packet = document.getElementById('packet');
+  
+  // Nodes
+  const nodeMobile = document.getElementById('node-mobile');
+  const nodeDify = document.getElementById('node-dify');
+  const nodeApi = document.getElementById('node-api');
+  const hubZone = document.getElementById('hub-zone');
+  
+  // SVG Lines
+  const lineDirect = document.getElementById('line-direct');
+  const lineToDify = document.getElementById('line-to-dify');
+  const lineFromDify = document.getElementById('line-from-dify');
+
+  // 計算節點中心點
+  function getCenter(el) {
+    const rect = el.getBoundingClientRect();
+    const canvasRect = canvasArea.getBoundingClientRect();
+    return {
+      x: rect.left - canvasRect.left + rect.width / 2,
+      y: rect.top - canvasRect.top + rect.height / 2
+    };
+  }
+
+  // 繪製 SVG 連線
+  function drawLines() {
+    const pMobile = getCenter(nodeMobile);
+    const pDify = getCenter(nodeDify);
+    const pApi = getCenter(nodeApi);
+
+    // 畫一條美麗的曲線 (直連)
+    lineDirect.setAttribute('d', `M ${pMobile.x} ${pMobile.y} Q ${pMobile.x + 300} ${pMobile.y - 150} ${pApi.x} ${pApi.y}`);
+    // 直線 (CAO)
+    lineToDify.setAttribute('d', `M ${pMobile.x} ${pMobile.y} L ${pDify.x} ${pDify.y}`);
+    lineFromDify.setAttribute('d', `M ${pDify.x} ${pDify.y} L ${pApi.x} ${pApi.y}`);
+  }
+
+  // 視窗縮放時重繪線條
+  window.addEventListener('resize', drawLines);
+
+  function setStatus(msg) { statusBox.innerHTML = msg; }
+
+  // 核心：重置系統狀態
+  function resetSim() {
+    drawLines(); // 確保線條位置正確
+    const mode = modeSelect.value;
+    
+    // 停止動畫與重置按鈕
+    packet.style.display = 'none';
+    packet.style.transition = 'none';
+    btnSend.disabled = false;
+    
+    // 移除發光特效
+    nodeMobile.classList.remove('active');
+    nodeDify.classList.remove('active');
+    nodeApi.classList.remove('active');
+    document.querySelectorAll('.sub-node').forEach(n => n.classList.remove('pulse'));
+    document.querySelectorAll('.path-line').forEach(l => l.classList.remove('path-active'));
+
+    // 根據模式切換 UI 顯示與初始文字
+    if (mode === 'standalone') {
+      canvasArea.classList.add('mode-standalone');
+      lineDirect.style.opacity = '1';
+      lineToDify.style.opacity = '0';
+      lineFromDify.style.opacity = '0';
+      setStatus("【當前模式：傳統直連】這就像是獨立戶：手機直接問雲端，沒有記憶、沒有本地檔案、沒有邏輯串接。");
+    } else {
+      canvasArea.classList.remove('mode-standalone');
+      lineDirect.style.opacity = '0';
+      lineToDify.style.opacity = '1';
+      lineFromDify.style.opacity = '1';
+      setStatus("【當前模式：工作流樞紐】這就像是智慧母艦：手機只負責觸發，Dify 自動調用記憶、搜尋、與模型算力整合答案。");
+    }
+  }
+
+  // 光點移動動畫函數
+  async function movePacket(startEl, endEl, duration, color = 'white', pathEl = null) {
+    const start = getCenter(startEl);
+    const end = getCenter(endEl);
+    
+    packet.style.display = 'block';
+    packet.style.transition = 'none';
+    packet.style.left = start.x + 'px';
+    packet.style.top = start.y + 'px';
+    packet.style.background = color;
+    packet.style.boxShadow = `0 0 15px ${color}`;
+    
+    if(pathEl) pathEl.classList.add('path-active');
+
+    await new Promise(r => setTimeout(r, 50)); // 強制重新渲染
+    
+    packet.style.transition = `all ${duration}s cubic-bezier(0.4, 0, 0.2, 1)`;
+    packet.style.left = end.x + 'px';
+    packet.style.top = end.y + 'px';
+    
+    await new Promise(r => setTimeout(r, duration * 1000));
+    if(pathEl) pathEl.classList.remove('path-active');
+  }
+
+  // 子節點閃爍動畫
+  async function pulseSubNodes() {
+    const nodes = [document.getElementById('tool-prompt'), document.getElementById('tool-rag'), document.getElementById('tool-search')];
+    for (let node of nodes) {
+      node.classList.add('pulse');
+      await new Promise(r => setTimeout(r, 400));
+      node.classList.remove('pulse');
+    }
+  }
+
+  // 執行流程
+  async function startFlow() {
+    btnSend.disabled = true;
+    packet.style.display = 'none';
+    const mode = modeSelect.value;
+
+    if (mode === 'standalone') {
+      // ===== 獨立戶流程 =====
+      setStatus("📡 發送提問：繞過中樞，手機直接呼叫外部 API...");
+      nodeMobile.classList.add('active');
+      await movePacket(nodeMobile, nodeApi, 1.2, '#10b981', lineDirect);
+      
+      nodeMobile.classList.remove('active');
+      nodeApi.classList.add('active');
+      setStatus("⚡ API 運算中...");
+      await new Promise(r => setTimeout(r, 800));
+      
+      setStatus("📥 原始結果回傳至手機...");
+      await movePacket(nodeApi, nodeMobile, 1.2, '#10b981', lineDirect);
+      
+      nodeApi.classList.remove('active');
+      packet.style.display = 'none';
+      setStatus("<b>這是獨立戶：手機直接問雲端，沒有記憶、沒有本地檔案、沒有邏輯串接。</b>");
+
+    } else {
+      // ===== Dify 工作流樞紐流程 =====
+      setStatus("🚀 發送提問：觸發工作流，訊號送至 Dify 母艦...");
+      nodeMobile.classList.add('active');
+      await movePacket(nodeMobile, nodeDify, 1.0, '#f59e0b', lineToDify);
+      
+      nodeMobile.classList.remove('active');
+      nodeDify.classList.add('active');
+      packet.style.display = 'none';
+      
+      setStatus("🧠 Dify 啟動工作流：注入系統 Prompt、檢索專利資料、調用 Google 搜尋...");
+      await pulseSubNodes();
+      
+      setStatus("📦 彙整上下文：Dify 將豐富的資料包送往大模型算力...");
+      await movePacket(nodeDify, nodeApi, 1.0, '#3b82f6', lineFromDify);
+      
+      nodeDify.classList.remove('active');
+      nodeApi.classList.add('active');
+      setStatus("⚡ 大模型根據所有提供的線索進行高階運算...");
+      await new Promise(r => setTimeout(r, 1000));
+      
+      setStatus("📥 運算完畢：模型結果傳回 Dify 母艦進行格式化...");
+      await movePacket(nodeApi, nodeDify, 1.0, '#3b82f6', lineFromDify);
+      
+      nodeApi.classList.remove('active');
+      nodeDify.classList.add('active');
+      packet.style.display = 'none';
+      setStatus("✨ Dify 將最終完美的答案回傳給您！");
+      await new Promise(r => setTimeout(r, 400));
+      
+      await movePacket(nodeDify, nodeMobile, 1.0, '#f59e0b', lineToDify);
+      nodeDify.classList.remove('active');
+      packet.style.display = 'none';
+      
+      setStatus("<b>這是工作流樞紐：手機只負責觸發，Dify 自動調用記憶、搜尋、與模型算力，最後整合完美答案回傳。</b>");
+    }
+    
+    btnSend.disabled = false;
+  }
+
+  // 啟動初始化
+  setTimeout(resetSim, 100); 
+</script>
+
+</body>
+</html>
