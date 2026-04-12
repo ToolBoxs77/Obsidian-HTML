@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Obsidian BMO 架構模擬</title>
+<style>
+  :root {
+    --bg-main: #121212;
+    --bg-sidebar: #1e1e1e;
+    --bg-canvas: #181818;
+    --text-main: #e0e0e0;
+    --text-muted: #888;
+    --accent-purple: #8b5cf6;
+    --accent-blue: #3b82f6;
+    --accent-orange: #f59e0b;
+    --border-color: #333;
+  }
+  
+  body { 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+    background: var(--bg-main); 
+    color: var(--text-main); 
+    margin: 0; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    min-height: 100vh;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+  
+  .app-container { 
+    width: 100%; 
+    max-width: 900px; 
+    height: 550px; 
+    background: var(--bg-canvas); 
+    border-radius: 12px; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8); 
+    display: flex; 
+    overflow: hidden; 
+    border: 1px solid var(--border-color);
+  }
+  
+  /* 左側側邊欄 (模擬 Obsidian) */
+  .sidebar {
+    width: 300px;
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border-color);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    position: relative;
+    z-index: 10;
+  }
+  
+  .sidebar h3 { margin: 0 0 10px 0; font-size: 16px; display: flex; align-items: center; gap: 8px; color: #a78bfa; }
+  
+  .input-group { display: flex; flex-direction: column; gap: 8px; }
+  .input-group label { font-size: 12px; color: var(--text-muted); font-weight: bold; }
+  select { 
+    padding: 10px; 
+    border-radius: 6px; 
+    background: #2d2d2d; 
+    color: white; 
+    border: 1px solid #555; 
+    font-size: 14px; 
+    cursor: pointer; 
+    outline: none;
+  }
+  
+  .button-group { display: flex; gap: 10px; margin-top: 10px; }
+  button { 
+    padding: 10px 15px; 
+    border: none; 
+    border-radius: 6px; 
+    font-weight: bold; 
+    cursor: pointer; 
+    transition: 0.2s; 
+    font-size: 14px; 
+    flex: 1;
+  }
+  .btn-send { background: var(--accent-purple); color: white; }
+  .btn-send:hover { background: #7c3aed; }
+  .btn-reset { background: #444; color: white; flex: 0.5; }
+  .btn-reset:hover { background: #555; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* 產生的檔案區塊 */
+  .generated-file {
+    margin-top: 20px;
+    padding: 12px;
+    background: #252525;
+    border: 1px dashed #555;
+    border-radius: 8px;
+    font-size: 13px;
+    display: none; /* 初始隱藏 */
+    animation: fadeIn 0.5s ease;
+  }
+  .generated-file span { display: block; margin-top: 5px; font-size: 11px; color: var(--text-muted); }
+  
+  .status-text {
+    margin-top: auto;
+    padding: 15px;
+    background: #111;
+    border-radius: 8px;
+    border-left: 4px solid #444;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #a3e635;
+  }
+
+  /* 右側畫布區 */
+  .canvas {
+    flex: 1;
+    position: relative;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  /* 節點樣式 */
+  .node { 
+    padding: 15px 20px; 
+    border-radius: 8px; 
+    font-weight: bold; 
+    text-align: center; 
+    background: #252525; 
+    z-index: 2; 
+    position: absolute; 
+    border: 2px solid transparent; 
+    transition: 0.3s; 
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
+  }
+  .node small { display: block; font-size: 12px; font-weight: normal; color: #aaa; margin-top: 4px; }
+  .node.active { transform: scale(1.05); }
+
+  /* 節點定位 */
+  #node-sidebar-port { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 10px; height: 10px; background: transparent; }
+  
+  #node-cloud { top: 60px; right: 50px; border-color: var(--accent-blue); }
+  
+  #node-tunnel { top: 220px; right: 280px; background: #1a2e25; border-color: #10b981; border-style: dashed; font-size: 13px; padding: 10px; }
+  
+  #node-dify { bottom: 60px; right: 50px; border-color: var(--accent-orange); width: 220px; display: flex; flex-direction: column; align-items: center; gap: 15px; background: #2d2418; }
+  
+  .sub-node { 
+    font-size: 12px; 
+    padding: 8px 12px; 
+    background: #222; 
+    border: 1px solid var(--accent-orange); 
+    border-radius: 6px; 
+    color: #fcd34d; 
+    transition: 0.3s; 
+    width: 90%;
+  }
+  .sub-node.pulse { background: var(--accent-orange); color: #000; box-shadow: 0 0 15px var(--accent-orange); }
+
+  /* SVG 連線 */
+  svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+  .path-line { stroke: var(--border-color); stroke-width: 2; stroke-dasharray: 5,5; fill: none; transition: 0.3s; }
+  .path-active { stroke: #fff; stroke-width: 3; stroke-dasharray: none; filter: drop-shadow(0 0 5px rgba(255,255,255,0.5)); }
+
+  /* 動畫封包 */
+  #packet { 
+    position: absolute; 
+    width: 12px; 
+    height: 12px; 
+    background: white; 
+    border-radius: 50%; 
+    box-shadow: 0 0 12px white; 
+    z-index: 10; 
+    display: none; 
+    margin-top: -6px; 
+    margin-left: -6px; 
+  }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* 未選擇模式時的樣式淡化 */
+  .canvas.dim-dify #node-dify, .canvas.dim-dify #node-tunnel { opacity: 0.2; filter: grayscale(100%); }
+  .canvas.dim-cloud #node-cloud { opacity: 0.2; filter: grayscale(100%); }
+
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  
+  <div class="sidebar">
+    <h3><span style="font-size: 20px;">🤖</span> BMO 架構視圖</h3>
+    
+    <div class="input-group">
+      <label>對話模型選擇 (Model Selection)</label>
+      <select id="model-select" onchange="resetSim()">
+        <option value="general">🌍 廣域大腦 (直接連線 Gemini/Claude API)</option>
+        <option value="dify">🔒 FTO 專利專家 (連線母艦 Dify)</option>
+      </select>
+    </div>
+    
+    <div class="button-group">
+      <button id="btn-send" class="btn-send" onclick="startFlow()">發送提問</button>
+      <button class="btn-reset" onclick="resetSim()">🔄 重置</button>
+    </div>
+
+    <div id="generated-file" class="generated-file">
+      <b id="file-title">📄 檔案名稱.md</b>
+      <span>自動存入 Obsidian -> GitHub 同步</span>
+    </div>
+
+    <div id="status-text" class="status-text">
+      請選擇模型並點擊「發送提問」觀看工作流。
+    </div>
+  </div>
+
+  <div class="canvas" id="canvas-area">
+    <div id="node-sidebar-port"></div> <svg>
+      <path id="path-cloud" class="path-line" d="" />
+      <path id="path-tunnel" class="path-line" d="" />
+      <path id="path-dify" class="path-line" d="" />
+    </svg>
+
+    <div id="packet"></div>
+
+    <div class="node" id="node-cloud">
+      🌍 Cloud AI<br><small>(世界知識)</small>
+    </div>
+
+    <div class="node" id="node-tunnel">
+      🛡️ Tailscale 虛擬內網
+    </div>
+
+    <div class="node" id="node-dify">
+      🧠 128GB 母艦 (Dify)
+      <div class="sub-node" id="node-fto-kb">📚 FTO 知識庫 (2筆專利)</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const modelSelect = document.getElementById('model-select');
+  const canvasArea = document.getElementById('canvas-area');
+  const btnSend = document.getElementById('btn-send');
+  const statusText = document.getElementById('status-text');
+  const packet = document.getElementById('packet');
+  const generatedFile = document.getElementById('generated-file');
+  const fileTitle = document.getElementById('file-title');
+  
+  // 節點
+  const port = document.getElementById('node-sidebar-port');
+  const nodeCloud = document.getElementById('node-cloud');
+  const nodeTunnel = document.getElementById('node-tunnel');
+  const nodeDify = document.getElementById('node-dify');
+  const nodeFtoKb = document.getElementById('node-fto-kb');
+  
+  // 路徑
+  const pathCloud = document.getElementById('path-cloud');
+  const pathTunnel = document.getElementById('path-tunnel');
+  const pathDify = document.getElementById('path-dify');
+
+  // 計算座標以繪製線條與移動動畫
+  function getCenter(el) {
+    const rect = el.getBoundingClientRect();
+    const canvasRect = canvasArea.getBoundingClientRect();
+    return {
+      x: rect.left - canvasRect.left + rect.width / 2,
+      y: rect.top - canvasRect.top + rect.height / 2
+    };
+  }
+
+  function drawLines() {
+    const pPort = getCenter(port);
+    const pCloud = getCenter(nodeCloud);
+    const pTunnel = getCenter(nodeTunnel);
+    const pDify = getCenter(nodeDify);
+
+    // 側邊欄 -> 雲端 (曲線)
+    pathCloud.setAttribute('d', `M ${pPort.x} ${pPort.y} Q ${pPort.x + 150} ${pCloud.y} ${pCloud.x} ${pCloud.y}`);
+    // 側邊欄 -> 隧道 -> Dify (折線)
+    pathTunnel.setAttribute('d', `M ${pPort.x} ${pPort.y} L ${pTunnel.x} ${pTunnel.y}`);
+    pathDify.setAttribute('d', `M ${pTunnel.x} ${pTunnel.y} L ${pDify.x} ${pDify.y}`);
+  }
+
+  window.addEventListener('resize', drawLines);
+
+  // 初始化與重置
+  function resetSim() {
+    drawLines();
+    const mode = modelSelect.value;
+    
+    // 停止動畫
+    packet.style.display = 'none';
+    packet.style.transition = 'none';
+    btnSend.disabled = false;
+    
+    // 隱藏產生的檔案
+    generatedFile.style.display = 'none';
+    
+    // 移除特效
+    nodeCloud.classList.remove('active');
+    nodeTunnel.classList.remove('active');
+    nodeDify.classList.remove('active');
+    nodeFtoKb.classList.remove('pulse');
+    document.querySelectorAll('.path-line').forEach(l => l.classList.remove('path-active'));
+
+    // 依據下拉選單更新 UI 亮度與預設提示文字
+    statusText.style.borderLeftColor = '#444';
+    if (mode === 'general') {
+      canvasArea.className = 'canvas dim-dify';
+      statusText.innerHTML = "就緒。即將連接通用大語言模型 API。";
+    } else {
+      canvasArea.className = 'canvas dim-cloud';
+      statusText.innerHTML = "就緒。即將透過安全隧道連接本地 Dify 知識庫。";
+    }
+  }
+
+  // 移動動畫
+  async function movePacket(startEl, endEl, duration, color, pathEl = null) {
+    const start = getCenter(startEl);
+    const end = getCenter(endEl);
+    
+    packet.style.display = 'block';
+    packet.style.transition = 'none';
+    packet.style.left = start.x + 'px';
+    packet.style.top = start.y + 'px';
+    packet.style.background = color;
+    packet.style.boxShadow = `0 0 15px ${color}`;
+    
+    if(pathEl) pathEl.classList.add('path-active');
+
+    await new Promise(r => setTimeout(r, 50)); 
+    
+    packet.style.transition = `all ${duration}s cubic-bezier(0.4, 0, 0.2, 1)`;
+    packet.style.left = end.x + 'px';
+    packet.style.top = end.y + 'px';
+    
+    await new Promise(r => setTimeout(r, duration * 1000));
+    if(pathEl) pathEl.classList.remove('path-active');
+  }
+
+  // 執行主流程
+  async function startFlow() {
+    btnSend.disabled = true;
+    generatedFile.style.display = 'none';
+    const mode = modelSelect.value;
+
+    if (mode === 'general') {
+      // --- 廣域大腦流程 ---
+      statusText.style.borderLeftColor = '#3b82f6'; // Blue
+      statusText.innerHTML = "訊號發送：直連 Cloud API 中...";
+      
+      await movePacket(port, nodeCloud, 1.0, '#3b82f6', pathCloud);
+      
+      nodeCloud.classList.add('active');
+      statusText.innerHTML = "雲端處理中：獲取世界知識...";
+      await new Promise(r => setTimeout(r, 800));
+      nodeCloud.classList.remove('active');
+      
+      statusText.innerHTML = "結果回傳至 Obsidian...";
+      await movePacket(nodeCloud, port, 1.0, '#3b82f6', pathCloud);
+      packet.style.display = 'none';
+      
+      // 顯示產出
+      fileTitle.innerHTML = "📄 對話紀錄.md";
+      generatedFile.style.borderColor = '#3b82f6';
+      generatedFile.style.display = 'block';
+      statusText.innerHTML = "<b>正在使用官方直連 API。擁有全網廣大知識，適合詢問顯卡、軟體教學等通用問題。</b>";
+
+    } else {
+      // --- FTO 專利專家流程 ---
+      statusText.style.borderLeftColor = '#f59e0b'; // Orange
+      statusText.innerHTML = "訊號發送：進入 Tailscale 虛擬內網...";
+      
+      await movePacket(port, nodeTunnel, 0.6, '#f59e0b', pathTunnel);
+      nodeTunnel.classList.add('active');
+      await new Promise(r => setTimeout(r, 300));
+      nodeTunnel.classList.remove('active');
+      
+      statusText.innerHTML = "抵達 128GB 母艦，啟動 Dify 工作流...";
+      await movePacket(nodeTunnel, nodeDify, 0.6, '#f59e0b', pathDify);
+      packet.style.display = 'none';
+      
+      nodeDify.classList.add('active');
+      statusText.innerHTML = "母艦檢索中：調用 FTO 知識庫...";
+      nodeFtoKb.classList.add('pulse');
+      await new Promise(r => setTimeout(r, 1200));
+      nodeFtoKb.classList.remove('pulse');
+      
+      statusText.innerHTML = "AI 分析完畢，結果循原路徑回傳...";
+      nodeDify.classList.remove('active');
+      
+      await movePacket(nodeDify, nodeTunnel, 0.6, '#f59e0b', pathDify);
+      nodeTunnel.classList.add('active');
+      await new Promise(r => setTimeout(r, 200));
+      nodeTunnel.classList.remove('active');
+      await movePacket(nodeTunnel, port, 0.6, '#f59e0b', pathTunnel);
+      
+      packet.style.display = 'none';
+      
+      // 顯示產出
+      fileTitle.innerHTML = "📄 專利分析紀錄.md";
+      generatedFile.style.borderColor = '#f59e0b';
+      generatedFile.style.display = 'block';
+      statusText.innerHTML = "<b>正在呼叫母艦 Dify 工作流。嚴格限制從 2 筆專利中擷取事實進行分析，拒絕外部幻覺。</b>";
+    }
+    
+    btnSend.disabled = false;
+  }
+
+  // 初次載入
+  setTimeout(resetSim, 100);
+</script>
+
+</body>
+</html>
