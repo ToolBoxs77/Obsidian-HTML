@@ -3,242 +3,306 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI 上下文與記憶檢索模擬器</title>
+<title>AI 物理過濾網：上下文與向量污染模擬器</title>
 <style>
   :root {
-    --bg-main: #121212;
-    --bg-panel: #1e1e1e;
-    --text-main: #e0e0e0;
-    --text-muted: #888;
-    --color-upload: #3b82f6; /* Blue */
-    --color-paste: #eab308;  /* Gold */
-    --color-lost: #4b5563;   /* Gray */
-    --color-polluted: #ef4444; /* Red */
-    --border-color: #333;
+    --bg-dark: #0f172a;
+    --panel-bg: #1e293b;
+    --border: #334155;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    
+    --color-source: #3b82f6; /* Blue */
+    --color-context: #d946ef; /* Fuchsia/Pink */
+    --color-abyss: #ef4444; /* Red */
+    --color-ghost: #8b5cf6; /* Purple */
+    --color-success: #10b981; /* Emerald */
   }
-  
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: var(--bg-main);
-    color: var(--text-main);
-    margin: 0;
-    padding: 20px;
-    display: flex;
-    justify-content: center;
-  }
-  
-  .container {
-    width: 100%;
-    max-width: 800px;
-    background: var(--bg-panel);
-    border-radius: 12px;
-    border: 1px solid var(--border-color);
-    padding: 25px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-  }
-  
-  .header { border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 20px; }
-  .header h2 { margin: 0; display: flex; align-items: center; gap: 10px; color: #a855f7; }
 
-  /* 控制面板 */
-  .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; background: #181818; padding: 15px; border-radius: 8px; }
-  .control-group { display: flex; flex-direction: column; gap: 8px; }
-  label { font-size: 13px; font-weight: bold; color: var(--text-muted); }
-  select { padding: 10px; background: #2d2d2d; color: white; border: 1px solid #555; border-radius: 6px; cursor: pointer; font-size: 14px; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-dark); color: var(--text-main); margin: 0; padding: 20px; display: flex; justify-content: center; }
+  .container { width: 100%; max-width: 900px; background: var(--panel-bg); border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 15px 35px rgba(0,0,0,0.5); overflow: hidden; display: flex; flex-direction: column; }
+
+  /* 頂部控制列 */
+  .controls-header { background: #18212f; padding: 20px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 15px; }
+  .control-row { display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap; }
+  
+  .input-group { display: flex; align-items: center; gap: 10px; }
+  select { padding: 10px; background: #0f172a; color: white; border: 1px solid #475569; border-radius: 6px; font-size: 14px; cursor: pointer; }
   
   /* 開關 Toggle */
-  .toggle-container { display: flex; align-items: center; gap: 10px; margin-top: 5px; }
-  .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
+  .toggle-container { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+  .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
   .switch input { opacity: 0; width: 0; height: 0; }
-  .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .4s; border-radius: 20px; }
-  .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; }
-  input:checked + .slider { background-color: var(--color-polluted); }
+  .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #475569; transition: .3s; border-radius: 24px; }
+  .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+  input:checked + .slider { background-color: var(--color-abyss); }
   input:checked + .slider:before { transform: translateX(20px); }
 
-  /* 畫布與記憶體視覺化 */
-  .canvas { background: #111; border: 1px dashed #444; border-radius: 8px; padding: 20px; min-height: 180px; display: flex; flex-direction: column; gap: 10px; }
-  .memory-window { display: flex; flex-wrap: wrap; gap: 8px; min-height: 60px; padding: 10px; background: #222; border-radius: 6px; border: 1px solid #333; }
+  /* 按鈕群 */
+  .btn-group { display: flex; gap: 10px; }
+  button { padding: 10px 18px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+  .btn-execute { background: var(--color-source); color: white; }
+  .btn-execute:hover { background: #2563eb; }
+  .btn-execute:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-reset { background: #475569; color: white; }
+  .btn-reset:hover { background: #334155; }
   
-  /* 記憶區塊樣式 */
-  .chunk { padding: 10px; border-radius: 4px; font-size: 12px; font-weight: bold; text-align: center; display: flex; align-items: center; justify-content: center; opacity: 0; transform: translateY(10px); transition: all 0.4s ease; flex: 1 1 18%; min-width: 80px; }
+  /* 核心指令集按鈕 (預設隱藏) */
+  .btn-purge { background: #f59e0b; color: #000; display: none; animation: pulseBtn 1.5s infinite; }
+  .btn-purge:hover { background: #d97706; }
+
+  /* 狀態列 */
+  .status-bar { padding: 12px 20px; background: #000; border-bottom: 1px solid var(--border); font-size: 14px; color: var(--color-success); font-family: monospace; min-height: 20px; transition: color 0.3s; }
+
+  /* 畫布區塊 */
+  .workspace { display: grid; grid-template-columns: 1fr 1.5fr; gap: 20px; padding: 20px; min-height: 400px; }
+  .col-right { display: flex; flex-direction: column; gap: 20px; }
   
-  .chunk.upload-good { background: rgba(59, 130, 246, 0.2); border: 1px solid var(--color-upload); color: #93c5fd; }
-  .chunk.upload-lost { background: rgba(75, 85, 99, 0.2); border: 1px dashed var(--color-lost); color: var(--color-lost); text-decoration: line-through; }
-  .chunk.paste-gold { background: rgba(234, 179, 8, 0.2); border: 2px solid var(--color-paste); color: var(--color-paste); flex: 1 1 100%; font-size: 16px; box-shadow: 0 0 15px rgba(234, 179, 8, 0.2); }
-  .chunk.polluted { background: rgba(239, 68, 68, 0.2); border: 1px solid var(--color-polluted); color: #fca5a5; }
+  .zone { background: #0f172a; border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 10px; border: 2px dashed #334155; position: relative; }
+  .zone-title { font-size: 14px; font-weight: bold; margin: 0; padding-bottom: 10px; border-bottom: 1px solid #1e293b; display: flex; align-items: center; gap: 8px; }
+  
+  #zone-source { border-color: var(--color-source); }
+  #zone-context { border-color: var(--color-context); min-height: 120px; }
+  #zone-abyss { border-color: var(--color-abyss); background: #1a0a0a; flex: 1; }
+  
+  .block-container { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 10px; }
 
-  /* 顯示動畫 class */
-  .chunk.show { opacity: 1; transform: translateY(0); }
+  /* 資料區塊 (Blocks) */
+  .data-block { 
+    padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: bold; text-align: center; 
+    background: #1e293b; border: 1px solid #475569; color: white;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: popIn 0.3s ease-out forwards;
+  }
+  
+  /* 特定狀態的區塊樣式 */
+  .data-block.prefix { border-color: var(--color-success); color: var(--color-success); background: rgba(16, 185, 129, 0.1); }
+  .data-block.suffix { border-color: var(--color-source); color: var(--color-source); background: rgba(59, 130, 246, 0.1); }
+  .data-block.lost { border-color: var(--color-abyss); color: #fca5a5; background: rgba(239, 68, 68, 0.1); text-decoration: line-through; opacity: 0.8; }
+  .data-block.full { border-color: #fcd34d; color: #fcd34d; background: rgba(252, 211, 77, 0.1); }
+  .data-block.ghost { border-color: var(--color-ghost); color: #c4b5fd; background: rgba(139, 92, 246, 0.2); border-style: dashed; }
+  .data-block.destroying { transform: scale(0); opacity: 0; }
 
-  /* 按鈕區 */
-  .actions { display: flex; gap: 10px; margin-top: 20px; }
-  button { padding: 12px 20px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 14px; }
-  .btn-run { background: #a855f7; color: white; flex: 1; }
-  .btn-run:hover { background: #9333ea; }
-  .btn-reset { background: #444; color: white; flex: 0.5; }
-  .btn-reset:hover { background: #555; }
-  .btn-prompt { background: #10b981; color: white; width: 100%; margin-top: 15px; display: none; }
-  .btn-prompt:hover { background: #059669; }
-  button:disabled { opacity: 0.5; cursor: not-allowed; }
-
-  /* 狀態與提示詞顯示區 */
-  .status-box { margin-top: 15px; padding: 15px; background: #000; border-radius: 6px; border-left: 4px solid #a855f7; font-size: 13px; line-height: 1.5; color: #d1d5db; min-height: 40px; }
-  .prompt-output { margin-top: 15px; padding: 15px; background: #2d2418; border: 1px solid var(--color-paste); border-radius: 6px; font-family: monospace; font-size: 14px; color: var(--color-paste); display: none; white-space: pre-wrap; }
+  @keyframes popIn { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+  @keyframes pulseBtn { 0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); } 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }
 
 </style>
 </head>
 <body>
 
 <div class="container">
-  <div class="header">
-    <h2>🧠 AI 上下文與記憶檢索模擬器</h2>
-  </div>
-
-  <div class="controls">
-    <div class="control-group">
-      <label>資料輸入模式 (Input Mode)</label>
-      <select id="mode-select" onchange="resetSim()">
-        <option value="upload">📄 檔案上傳模式 (Chunks 檢索)</option>
-        <option value="paste">📝 直接貼上文字 (100% 佔據金鑰區)</option>
-      </select>
-    </div>
-    
-    <div class="control-group">
-      <label>向量檢索干擾</label>
+  <div class="controls-header">
+    <div class="control-row">
+      <div class="input-group">
+        <span style="font-size: 14px; font-weight: bold;">1. 選擇輸入機制：</span>
+        <select id="input-mode" onchange="checkState()">
+          <option value="upload">📄 大檔案上傳 (Large File Upload)</option>
+          <option value="paste">📝 純文字貼上 (Direct Paste)</option>
+        </select>
+      </div>
+      
       <div class="toggle-container">
+        <b>2. 啟動同名檔案污染：</b>
         <label class="switch">
-          <input type="checkbox" id="pollution-toggle" onchange="resetSim()">
+          <input type="checkbox" id="pollution-toggle" onchange="checkState()">
           <span class="slider"></span>
         </label>
-        <span style="font-size:13px; color:#ef4444;">模擬重複檔名污染</span>
       </div>
+    </div>
+
+    <div class="control-row">
+      <div class="btn-group">
+        <button id="btn-execute" class="btn-execute" onclick="executeWrite()">▶ 3. 執行寫入 (Execute Write)</button>
+        <button id="btn-reset" class="btn-reset" onclick="resetSystem()">🔄 重置系統 (Reset)</button>
+      </div>
+      <button id="btn-purge" class="btn-purge" onclick="executePurge()">🔥 執行核心指令集 (Purge Cache)</button>
     </div>
   </div>
 
-  <div class="canvas">
-    <label style="color:#aaa;">AI 短期記憶視窗 (Context Window)</label>
-    <div class="memory-window" id="memory-window">
+  <div class="status-bar" id="status-bar">
+    系統就緒。請選擇參數並點擊「執行寫入」。
+  </div>
+
+  <div class="workspace">
+    <div class="zone" id="zone-source">
+      <h3 class="zone-title" style="color: var(--color-source);">📄 來源檔案 (Source)</h3>
+      <div class="block-container" id="container-source"></div>
+    </div>
+    
+    <div class="col-right">
+      <div class="zone" id="zone-context">
+        <h3 class="zone-title" style="color: var(--color-context);">🧠 AI 金鑰區 (Context Window)</h3>
+        <div class="block-container" id="container-context"></div>
       </div>
+      
+      <div class="zone" id="zone-abyss">
+        <h3 class="zone-title" style="color: var(--color-abyss);">🕳️ 物理深淵 (The Abyss)</h3>
+        <div class="block-container" id="container-abyss"></div>
+      </div>
+    </div>
   </div>
-
-  <div class="actions">
-    <button id="btn-run" class="btn-run" onclick="runSim()">▶ 執行模擬</button>
-    <button class="btn-reset" onclick="resetSim()">🔄 重置</button>
-  </div>
-
-  <div class="status-box" id="status-box">
-    等待設定... 請選擇模式並點擊「執行模擬」。
-  </div>
-
-  <button id="btn-prompt" class="btn-prompt" onclick="showPrompt()">✨ 去重與優化指令產生器</button>
-  <div id="prompt-output" class="prompt-output"></div>
-
 </div>
 
 <script>
-  const modeSelect = document.getElementById('mode-select');
-  const pollutionToggle = document.getElementById('pollution-toggle');
-  const memoryWindow = document.getElementById('memory-window');
-  const statusBox = document.getElementById('status-box');
-  const btnRun = document.getElementById('btn-run');
-  const btnPrompt = document.getElementById('btn-prompt');
-  const promptOutput = document.getElementById('prompt-output');
+  // DOM 元素
+  const elMode = document.getElementById('input-mode');
+  const elPollution = document.getElementById('pollution-toggle');
+  const btnExecute = document.getElementById('btn-execute');
+  const btnPurge = document.getElementById('btn-purge');
+  const statusBar = document.getElementById('status-bar');
+  
+  const cSource = document.getElementById('container-source');
+  const cContext = document.getElementById('container-context');
+  const cAbyss = document.getElementById('container-abyss');
 
-  // 初始化與重置系統
-  function resetSim() {
-    memoryWindow.innerHTML = '';
-    statusBox.innerHTML = `系統已重置。當前模式：${modeSelect.options[modeSelect.selectedIndex].text}`;
-    statusBox.style.borderLeftColor = '#a855f7';
-    btnRun.disabled = false;
-    btnPrompt.style.display = 'none';
-    promptOutput.style.display = 'none';
+  // 系統狀態
+  let hasExecuted = false;
+
+  // 工具函數：產生區塊 HTML
+  function createBlock(id, label, className = '') {
+    const div = document.createElement('div');
+    div.className = `data-block ${className}`;
+    div.id = `block-${id}`;
+    div.innerText = label;
+    return div;
   }
 
-  // 延遲添加元素的輔助函數 (製造逐塊載入的動畫感)
-  async function addChunk(text, className, delay) {
-    return new Promise(resolve => {
-      setTimeout(() => {
-        const chunk = document.createElement('div');
-        chunk.className = `chunk ${className}`;
-        chunk.innerText = text;
-        memoryWindow.appendChild(chunk);
-        
-        // 觸發 CSS 動畫
-        setTimeout(() => chunk.classList.add('show'), 50);
-        resolve();
-      }, delay);
-    });
+  // 工具函數：更新狀態文字
+  function setStatus(text, color = "var(--color-success)") {
+    statusBar.innerText = "> " + text;
+    statusBar.style.color = color;
   }
 
-  // 執行主模擬流程
-  async function runSim() {
-    btnRun.disabled = true;
-    memoryWindow.innerHTML = '';
-    const mode = modeSelect.value;
-    const isPolluted = pollutionToggle.checked;
+  // 初始/重置防呆機制
+  function checkState() {
+    if (hasExecuted) resetSystem();
+  }
 
-    if (mode === 'upload') {
-      // ===== 檔案上傳模式 =====
-      statusBox.style.borderLeftColor = 'var(--color-upload)';
-      statusBox.innerHTML = "正在切割檔案並進行向量檢索 (RAG)...";
+  // 重置系統
+  function resetSystem() {
+    hasExecuted = false;
+    btnExecute.disabled = false;
+    btnPurge.style.display = 'none'; // 嚴格隱藏核心指令集按鈕
+    
+    // 清空所有容器
+    cSource.innerHTML = '';
+    cContext.innerHTML = '';
+    cAbyss.innerHTML = '';
+
+    // 重新產生來源檔案的 10 個區塊
+    for (let i = 1; i <= 10; i++) {
+      cSource.appendChild(createBlock(`src-${i}`, `區塊 ${i}`));
+    }
+    
+    setStatus("系統已重置。等待執行...");
+  }
+
+  // 輔助動畫：非同步延遲
+  const delay = ms => new Promise(res => setTimeout(res, ms));
+
+  // 主邏輯：執行寫入
+  async function executeWrite() {
+    hasExecuted = true;
+    btnExecute.disabled = true; // 嚴格鎖定執行按鈕，防止狂點 Bug
+    
+    const mode = elMode.value;
+    const isPolluted = elPollution.checked;
+    
+    // 清空來源視覺 (表示資料已送出)
+    cSource.innerHTML = '';
+
+    if (mode === 'upload' && !isPolluted) {
+      // 情況一：上傳 + 無污染 (Lost in the middle)
+      setStatus("解析中... 發生 UI 片段化 (UI Snippetting)", "#facc15");
       
-      const chunksData = [];
-      // 構建 10 個區塊的邏輯
-      for (let i = 1; i <= 10; i++) {
-        if (isPolluted && (i === 2 || i === 8)) {
-          // 污染模式下，混入舊版資料
-          chunksData.push({ text: `⚠️ 舊版資料 v1 (污染)`, class: 'polluted' });
-        } else if (i >= 4 && i <= 7) {
-          // 4~7 點在中間，模擬 Lost in the middle
-          chunksData.push({ text: `第 ${i} 點 (中間遺失)`, class: 'upload-lost' });
-        } else {
-          // 頭尾區塊
-          chunksData.push({ text: `第 ${i} 點 (首尾保留)`, class: 'upload-good' });
-        }
-      }
-
-      // 逐一繪製區塊
-      for (const data of chunksData) {
-        await addChunk(data.text, data.class, 150);
-      }
-
-      if (isPolluted) {
-        statusBox.innerHTML = "<b>【警告】發生 Lost in the middle 且向量庫遭污染！</b><br>檔案太大導致中間內容被截斷遺失，且因為「檔名重複」，檢索系統錯誤抓取了舊版殘留資料。";
-        btnPrompt.style.display = 'block'; // 顯示指令產生器
-      } else {
-        statusBox.innerHTML = "<b>發生 Lost in the middle 現象。</b><br>由於大模型對長文檔的注意力機制缺陷，開頭與結尾的資訊被保留，但中間段落 (第 4-7 點) 在處理中遺失了。";
-      }
-
-    } else if (mode === 'paste') {
-      // ===== 直接貼上模式 =====
-      statusBox.style.borderLeftColor = 'var(--color-paste)';
-      statusBox.innerHTML = "直接貼上文字：繞過 RAG 向量切塊，直接塞入 Prompt 上下文...";
+      // 頭部進入 Context
+      for(let i=1; i<=3; i++) { cContext.appendChild(createBlock(`c-${i}`, `區塊 ${i}`, 'prefix')); await delay(100); }
+      // 中間掉入深淵
+      for(let i=4; i<=7; i++) { cAbyss.appendChild(createBlock(`a-${i}`, `區塊 ${i}`, 'lost')); await delay(100); }
+      // 尾部進入 Context
+      for(let i=8; i<=10; i++) { cContext.appendChild(createBlock(`c-${i}`, `區塊 ${i}`, 'suffix')); await delay(100); }
       
-      if (isPolluted) {
-        // 即使貼上文字，如果開啟污染，模擬系統預先塞了舊快取
-        await addChunk("⚠️ 舊版全域快取 (污染)", "polluted", 200);
-        await addChunk("📝 貼上之文字內容 (100% 完整保留)", "paste-gold", 300);
-        statusBox.innerHTML = "<b>文字完整保留，但上下文被舊快取污染。</b><br>貼上的文字 100% 佔據了金鑰區，但因為未清空歷史對話/快取，AI 仍可能被舊資料干擾。";
-        btnPrompt.style.display = 'block';
-      } else {
-        await addChunk("📝 貼上之文字內容 (100% 佔據金鑰區，無任何遺失)", "paste-gold", 200);
-        statusBox.innerHTML = "<b>最佳狀態：文字 100% 佔據短期記憶金鑰區。</b><br>因為沒有經過外部資料庫切塊，所有文字被完整放入 Context Window，不會發生中間遺失。";
+      setStatus("UI 片段化發生：頭尾被擷取，中間資料掉入深淵 (Lost in the Middle)。", "#facc15");
+
+    } 
+    else if (mode === 'upload' && isPolluted) {
+      // 情況二：上傳 + 污染 (Cache Shadow)
+      setStatus("解析中... 檢索到同名檔案，載入快取陰影！", "#ef4444");
+      
+      // 幽靈霸佔空間
+      cContext.appendChild(createBlock('ghost-1', '👻 舊版快取 V1', 'ghost')); await delay(150);
+      cContext.appendChild(createBlock('ghost-2', '👻 舊版快取 V2', 'ghost')); await delay(150);
+      
+      // 正確資料因空間被擠壓，只有極少數進入，其餘掉入深淵
+      cContext.appendChild(createBlock('c-1', '區塊 1', 'prefix')); await delay(100);
+      cContext.appendChild(createBlock('c-10', '區塊 10', 'suffix')); await delay(100);
+      
+      for(let i=2; i<=9; i++) { cAbyss.appendChild(createBlock(`a-${i}`, `區塊 ${i}`, 'lost')); await delay(80); }
+      
+      setStatus("快取陰影發生：同名檔案導致向量污染，舊記憶產生物理性錯位。", "#ef4444");
+      
+      // 唯一觸發核心指令按鈕的時機
+      btnPurge.style.display = 'flex';
+      
+    } 
+    else if (mode === 'paste') {
+      // 情況三：直接貼上 (繞過片段化)
+      setStatus("解析中... 直接貼上繞過 UI 切割", "var(--color-success)");
+      
+      // 1-10 全部進入 Context
+      for(let i=1; i<=10; i++) { cContext.appendChild(createBlock(`c-${i}`, `區塊 ${i}`, 'full')); await delay(80); }
+      
+      setStatus("純文字貼上：繞過前端 UI 切割，100% 佔據上下文空間。", "var(--color-success)");
+    }
+  }
+
+  // 淨化邏輯：執行核心指令集
+  async function executePurge() {
+    // 嚴格隱藏按鈕，確保只點一次
+    btnPurge.style.display = 'none';
+    setStatus("執行強制對齊指令... 正在摧毀幽靈快取", "#f59e0b");
+
+    // 1. 摧毀幽靈區塊
+    const ghosts = document.querySelectorAll('.ghost');
+    ghosts.forEach(g => g.classList.add('destroying'));
+    await delay(400);
+    ghosts.forEach(g => g.remove());
+
+    setStatus("快取已清除。正在從深淵撈回正確上下文...", "#3b82f6");
+    await delay(300);
+
+    // 2. 從深淵撈回本該進入的資料 (補齊 2,3 及 8,9)
+    // 假設我們將狀態恢復為標準的「無污染大檔案上傳」狀態
+    const blocksToRecover = [2, 3, 8, 9];
+    for (let id of blocksToRecover) {
+      const abyssBlock = document.getElementById(`block-a-${id}`);
+      if (abyssBlock) {
+        abyssBlock.classList.add('destroying'); // 在深淵中消失
+        await delay(100);
       }
     }
     
-    // 執行完畢不解鎖按鈕，迫使用戶按重置才能跑下一次，防止疊加混亂
+    // 從深淵移除 DOM
+    for (let id of blocksToRecover) {
+      const abyssBlock = document.getElementById(`block-a-${id}`);
+      if (abyssBlock) abyssBlock.remove();
+    }
+
+    // 3. 將撈回的資料放入 Context Window (照順序排列視覺)
+    cContext.innerHTML = ''; // 重繪以確保順序正確
+    cContext.appendChild(createBlock(`c-1`, `區塊 1`, 'prefix')); await delay(50);
+    cContext.appendChild(createBlock(`c-2`, `區塊 2`, 'prefix')); await delay(50);
+    cContext.appendChild(createBlock(`c-3`, `區塊 3`, 'prefix')); await delay(50);
+    cContext.appendChild(createBlock(`c-8`, `區塊 8`, 'suffix')); await delay(50);
+    cContext.appendChild(createBlock(`c-9`, `區塊 9`, 'suffix')); await delay(50);
+    cContext.appendChild(createBlock(`c-10`, `區塊 10`, 'suffix')); await delay(50);
+
+    setStatus("強制對齊完成：舊記憶已清空，真實上下文已恢復！", "var(--color-success)");
   }
 
-  // 產生指令
-  function showPrompt() {
-    promptOutput.style.display = 'block';
-    promptOutput.innerHTML = "「架構師，執行全域快取清理，忽略所有歷史檔名為 X 的殘留區塊，僅鎖定本輪次上傳/貼上之文字為唯一真理。」";
-    statusBox.innerHTML = "已產生除錯指令！請複製下方指令貼給 AI，強制它鎖定最新記憶。";
-  }
+  // 初始載入
+  resetSystem();
 
-  // 初次載入初始化
-  resetSim();
 </script>
-
 </body>
 </html>
