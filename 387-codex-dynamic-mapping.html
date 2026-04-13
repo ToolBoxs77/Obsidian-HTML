@@ -3,20 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>全域聖典 4.0 體用合一動態映射圖</title>
+<title>全域聖典 4.0 體用合一動態映射圖 (終極校準版)</title>
 <style>
   :root {
-    --bg-dark: #090c15;
+    --bg-dark: #070a13;
     --panel-bg: #111827;
     --border-color: #1f2937;
-    --text-main: #f3f4f6;
-    --text-muted: #9ca3af;
+    --text-main: #f8fafc;
+    --text-muted: #64748b;
     
-    /* 節點顏色 */
-    --color-node-a: #10b981; /* S24 綠色 */
-    --color-node-b: #f59e0b; /* 母艦 橘色 */
-    --color-node-c: #3b82f6; /* 雲端 藍色 */
-    --color-highway: #8b5cf6; /* 公路 紫色 */
+    /* 體 (物理層) 顏色 */
+    --color-body-a: #10b981; /* S24 綠 */
+    --color-body-b: #f59e0b; /* 母艦 橘 */
+    --color-body-c: #3b82f6; /* 雲端 藍 */
+    
+    /* 用 (公路層) 顏色 */
+    --color-func-c: #8b5cf6; /* 思維 紫 */
+    --color-func-d: #ec4899; /* 執行 粉 */
   }
 
   body {
@@ -34,11 +37,11 @@
 
   .container {
     width: 100%;
-    max-width: 950px;
+    max-width: 1000px;
     background: var(--panel-bg);
     border-radius: 12px;
     border: 1px solid var(--border-color);
-    box-shadow: 0 20px 40px rgba(0,0,0,0.7);
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -46,53 +49,85 @@
 
   /* 頂部標題 */
   .header {
-    background: #0f172a;
-    padding: 15px 25px;
+    background: #0b0f19;
+    padding: 18px 25px;
     border-bottom: 1px solid var(--border-color);
-    font-size: 16px;
-    font-weight: bold;
-    color: #38bdf8;
     display: flex;
     justify-content: space-between;
     align-items: center;
   }
+  .header-title { font-size: 16px; font-weight: bold; color: #38bdf8; display: flex; align-items: center; gap: 10px; }
+  .header-sub { font-size: 12px; color: var(--text-muted); font-family: monospace; }
 
-  /* 主要佈局 */
-  .main-layout {
-    display: flex;
-    height: 550px;
-  }
+  /* 佈局切分 */
+  .main-layout { display: flex; height: 600px; }
 
-  /* 左側畫布區 */
-  .canvas {
-    flex: 2;
-    position: relative;
-    background: #0b0f19;
-    padding: 20px;
-    overflow: hidden;
+  /* 左側：技術規範側邊欄 */
+  .sidebar {
+    width: 320px;
+    background: #0f172a;
+    padding: 25px;
     border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    z-index: 20;
+  }
+  
+  .sidebar h3 { margin: 0; font-size: 15px; color: var(--text-main); border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+  
+  .timeline { display: flex; flex-direction: column; gap: 15px; flex: 1; margin: 0; padding: 0; list-style: none; }
+  .step-card {
+    background: #1e293b;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 3px solid #334155;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #94a3b8;
+    transition: all 0.4s ease;
+    opacity: 0.5;
+  }
+  .step-card.active {
+    background: #2d3748;
+    color: #fff;
+    opacity: 1;
+    transform: translateX(5px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  
+  .controls { display: flex; gap: 10px; }
+  button { padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; flex: 1; transition: 0.2s; }
+  .btn-start { background: var(--color-body-b); color: #000; }
+  .btn-start:hover { background: #d97706; }
+  .btn-start:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-reset { background: transparent; border: 1px dashed #475569; color: var(--text-muted); flex: 0.5; }
+  .btn-reset:hover { background: #ef4444; color: white; border-style: solid; border-color: #ef4444; }
+
+  /* 右側：動態畫布區 */
+  .canvas {
+    flex: 1;
+    position: relative;
+    background: #070a13;
+    overflow: hidden;
   }
 
-  /* 層級標籤 */
-  .layer-label {
-    position: absolute;
-    font-size: 12px;
-    font-weight: bold;
-    color: #475569;
-    letter-spacing: 2px;
-    padding: 5px 10px;
-    border: 1px dashed #334155;
-    border-radius: 6px;
+  /* 維度切分線與標籤 */
+  .dimension-divider {
+    position: absolute; top: 50%; left: 0; width: 100%; height: 2px;
+    background: repeating-linear-gradient(90deg, #1f2937, #1f2937 10px, transparent 10px, transparent 20px);
+    z-index: 1;
   }
-  .layer-physical { top: 20px; left: 20px; }
-  .layer-neural { bottom: 20px; left: 20px; }
+  .dim-label { position: absolute; font-size: 12px; font-weight: bold; letter-spacing: 2px; padding: 6px 12px; border-radius: 6px; z-index: 2; }
+  .label-body { top: 20px; left: 20px; background: rgba(16, 185, 129, 0.1); color: var(--color-body-a); border: 1px solid var(--color-body-a); }
+  .label-func { bottom: 20px; left: 20px; background: rgba(139, 92, 246, 0.1); color: var(--color-func-c); border: 1px solid var(--color-func-c); }
 
-  /* 節點 (體) */
+  /* 節點通用樣式 */
   .node {
     position: absolute;
-    padding: 15px;
+    padding: 15px 20px;
     border-radius: 10px;
-    background: #1e293b;
+    background: #111827;
     border: 2px solid #334155;
     text-align: center;
     font-weight: bold;
@@ -103,69 +138,34 @@
   }
   .node small { display: block; font-size: 11px; color: var(--text-muted); margin-top: 5px; font-weight: normal; }
   
-  #node-a { top: 150px; left: 50px; border-color: var(--color-node-a); }
-  #node-b { top: 150px; left: 300px; border-color: var(--color-node-b); width: 140px; }
-  #node-c { top: 150px; left: 550px; border-color: var(--color-node-c); opacity: 0.5; } /* 此次任務未使用雲端，故淡化 */
-
-  /* 神經公路 (用) */
-  .highway-box {
-    position: absolute;
-    background: #1e1b4b;
-    border: 1px dashed var(--color-highway);
-    color: #c4b5fd;
-    font-size: 12px;
-    padding: 8px 12px;
-    border-radius: 6px;
-    z-index: 6;
-    opacity: 0.3;
-    transition: all 0.3s;
-  }
-  #hw-c { top: 260px; left: 310px; width: 120px; text-align: center; } /* 位於母艦下方，代表內部運算 */
+  /* 【體】層級節點 (上半部) */
+  #node-body-a { top: 80px; left: 80px; border-color: var(--color-body-a); }
+  #node-body-b { top: 80px; right: 80px; border-color: var(--color-body-b); width: 140px; }
   
-  /* SVG 連線 */
-  svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
-  .path-line { stroke: #334155; stroke-width: 3; stroke-dasharray: 6,6; fill: none; transition: all 0.3s; }
+  /* 【用】層級節點 (下半部) */
+  #node-func-c { bottom: 80px; right: 80px; border-color: var(--color-func-c); border-style: dashed; }
+  #node-func-d { bottom: 80px; left: 180px; border-color: var(--color-func-d); border-style: dashed; }
+
+  /* SVG 動態連線 */
+  svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
+  .path-line { stroke: #1f2937; stroke-width: 3; stroke-dasharray: 6,6; fill: none; transition: all 0.3s; }
   .path-active { stroke: #fff; stroke-dasharray: none; filter: drop-shadow(0 0 8px rgba(255,255,255,0.8)); }
-  
-  /* 連線標籤 */
-  .path-label { position: absolute; font-size: 11px; color: #94a3b8; background: #0b0f19; padding: 2px 5px; z-index: 2; border-radius: 4px; }
-  #label-tunnel { top: 135px; left: 180px; }
-  #label-hwd { top: 220px; left: 180px; }
 
-  /* 動態光點 */
+  /* 連線文字標籤 */
+  .path-tag { position: absolute; font-size: 11px; color: #94a3b8; background: #070a13; padding: 2px 6px; z-index: 3; border-radius: 4px; border: 1px solid #1f2937; }
+  
+  /* 發光封包 */
   #packet {
     position: absolute; width: 16px; height: 16px; background: white; border-radius: 50%;
     box-shadow: 0 0 15px white, 0 0 30px white; z-index: 10; display: none;
     margin-top: -8px; margin-left: -8px;
   }
 
-  /* 動畫特效 */
-  .active-pulse { animation: nodePulse 1s infinite alternate; }
-  @keyframes nodePulse { from { box-shadow: 0 0 10px currentColor; transform: scale(1); } to { box-shadow: 0 0 25px currentColor; transform: scale(1.05); } }
-
-  /* 右側側邊欄 */
-  .sidebar {
-    flex: 1;
-    background: #111827;
-    padding: 25px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
-
-  .sidebar h3 { margin: 0; font-size: 15px; color: #f3f4f6; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
-  
-  .tech-specs { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 15px; flex: 1; }
-  .spec-item { font-size: 13px; line-height: 1.6; color: var(--text-muted); background: #1f2937; padding: 12px; border-radius: 8px; border-left: 3px solid transparent; transition: all 0.3s; }
-  .spec-item.active { background: #374151; color: #fff; border-left-color: #38bdf8; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-  
-  .controls { display: flex; gap: 10px; }
-  button { padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; flex: 1; transition: 0.2s; }
-  .btn-start { background: var(--color-node-b); color: #000; }
-  .btn-start:hover { background: #d97706; }
-  .btn-start:disabled { opacity: 0.5; cursor: not-allowed; }
-  .btn-reset { background: #374151; color: white; flex: 0.5; }
-  .btn-reset:hover { background: #4b5563; }
+  /* 發光動畫 */
+  .glow-a { box-shadow: 0 0 20px var(--color-body-a); transform: scale(1.05); border-color: var(--color-body-a) !important; color: #fff; }
+  .glow-b { box-shadow: 0 0 20px var(--color-body-b); transform: scale(1.05); border-color: var(--color-body-b) !important; color: #fff; }
+  .glow-c { box-shadow: 0 0 20px var(--color-func-c); transform: scale(1.05); border-color: var(--color-func-c) !important; color: #fff; border-style: solid !important; }
+  .glow-d { box-shadow: 0 0 20px var(--color-func-d); transform: scale(1.05); border-color: var(--color-func-d) !important; color: #fff; border-style: solid !important; }
 
 </style>
 </head>
@@ -173,141 +173,240 @@
 
 <div class="container">
   <div class="header">
-    <span>🛡️ 當前任務流：CAO 專利侵權判定 (FTO)</span>
-    <span style="font-size: 12px; color: #64748b;">全域聖典 4.0 體用合一動態映射圖</span>
+    <div class="header-title">🛡️ 當前任務流：CAO 專利侵權判定 (FTO)</div>
+    <div class="header-sub">STATUS: IDLE | DIMENSION: 2D</div>
   </div>
 
   <div class="main-layout">
-    <div class="canvas" id="canvas-area">
-      <div class="layer-label layer-physical">【體】物理載體層</div>
-      <div class="layer-label layer-neural">【用】神經公路層</div>
-
-      <svg>
-        <path id="path-tunnel" class="path-line" d="M 120 180 L 300 180" />
-        <path id="path-return" class="path-line" d="M 300 200 L 120 200" />
-        <path class="path-line" d="M 440 180 L 550 180" />
-      </svg>
-
-      <div class="path-label" id="label-tunnel">Tailscale 隧道 (入口)</div>
-      <div class="path-label" id="label-hwd">公路 D (執行/同步回 Obsidian)</div>
-
-      <div class="node" id="node-a" style="color: var(--color-node-a);">
-        節點 A<br><small>S24 Ultra (手機)<br/>[ 工作流 A ]</small>
-      </div>
-      <div class="node" id="node-b" style="color: var(--color-node-b);">
-        節點 B<br><small>128GB 母艦 (伺服器)<br/>[ 工作流 B ]</small>
-      </div>
-      <div class="node" id="node-c" style="color: var(--color-node-c);">
-        節點 C<br><small>雲端節點<br/>[ 外部 API ]</small>
-      </div>
-
-      <div class="highway-box" id="hw-c">公路 C<br/>(思維 / FTO編排)</div>
-
-      <div id="packet"></div>
-    </div>
-
     <div class="sidebar">
-      <h3>技術規範說明</h3>
-      <ul class="tech-specs">
-        <li class="spec-item" id="spec-1">
-          <b>階段 1：實體穿透</b><br/>資料從工作流 A (S24 手機) 發出，繞過公網，安全穿透 Tailscale 虛擬內網隧道，抵達工作流 B (母艦)。
+      <h3>執行路徑解析</h3>
+      <ul class="timeline">
+        <li class="step-card" id="step-1">
+          <b style="color: var(--color-body-a);">[體] 工作流 A → [體] 工作流 B</b><br/>
+          S24 終端發起請求，穿透 Tailscale 虛擬內網隧道，物理封包安全送達 128GB 母艦。
         </li>
-        <li class="spec-item" id="spec-2">
-          <b>階段 2：公路 C 運算</b><br/>進入神經公路層，於公路 C 展開 FTO (專利侵權判定) 邏輯拆解、記憶體檢索與思維編排運算。
+        <li class="step-card" id="step-2">
+          <b style="color: var(--color-func-c);">[體] 母艦 ↓ [用] 公路 C</b><br/>
+          母艦將資料「下放」至神經公路層。公路 C 啟動 Dify 核心，進行 FTO 專業檢索與思維編排。
         </li>
-        <li class="spec-item" id="spec-3">
-          <b>階段 3：公路 D 執行寫回</b><br/>運算完畢，由公路 D 接手執行層指令，將分析結果無縫同步寫回前端 Obsidian (工作流 A)。
+        <li class="step-card" id="step-3">
+          <b style="color: var(--color-func-d);">[用] 公路 C → [用] 公路 D</b><br/>
+          邏輯運算完畢，資料轉交公路 D (執行/同步管線) 準備寫回。
+        </li>
+        <li class="step-card" id="step-4">
+          <b style="color: var(--text-main);">[用] 公路 D ↑ [體] 工作流 A</b><br/>
+          執行層將最終判決結果「躍遷」回物理層，無縫寫入 S24 的 Obsidian 節點。
         </li>
       </ul>
       
       <div class="controls">
         <button id="btn-start" class="btn-start" onclick="startFlow()">啟動任務流</button>
-        <button class="btn-reset" onclick="resetSim()">重置</button>
+        <button class="btn-reset" onclick="resetSim()">🔄</button>
       </div>
+    </div>
+
+    <div class="canvas" id="canvas-area">
+      <div class="dimension-divider"></div>
+      <div class="dim-label label-body">【體】物理載體層 (Structure)</div>
+      <div class="dim-label label-func">【用】神經公路層 (Function)</div>
+
+      <svg id="svg-layer">
+        <path id="path-1" class="path-line" d="" />
+        <path id="path-2" class="path-line" d="" />
+        <path id="path-3" class="path-line" d="" />
+        <path id="path-4" class="path-line" d="" />
+      </svg>
+
+      <div class="path-tag" id="tag-tunnel">Tailscale 隧道</div>
+      <div class="path-tag" id="tag-sync">Git Sync</div>
+
+      <div class="node" id="node-body-a">
+        工作流 A<br><small>(S24 Ultra / Obsidian)</small>
+      </div>
+      <div class="node" id="node-body-b">
+        工作流 B<br><small>(128GB 母艦 / RAG)</small>
+      </div>
+      
+      <div class="node" id="node-func-c">
+        公路 C<br><small>(思維推演 / Dify)</small>
+      </div>
+      <div class="node" id="node-func-d">
+        公路 D<br><small>(執行寫回 / 同步)</small>
+      </div>
+
+      <div id="packet"></div>
     </div>
   </div>
 </div>
 
 <script>
+  // DOM 元素擷取
   const btnStart = document.getElementById('btn-start');
   const packet = document.getElementById('packet');
-  const pathTunnel = document.getElementById('path-tunnel');
-  const pathReturn = document.getElementById('path-return');
+  const canvasArea = document.getElementById('canvas-area');
   
-  const nodeA = document.getElementById('node-a');
-  const nodeB = document.getElementById('node-b');
-  const hwC = document.getElementById('hw-c');
+  const nBodyA = document.getElementById('node-body-a');
+  const nBodyB = document.getElementById('node-body-b');
+  const nFuncC = document.getElementById('node-func-c');
+  const nFuncD = document.getElementById('node-func-d');
   
-  const specs = [
-    document.getElementById('spec-1'),
-    document.getElementById('spec-2'),
-    document.getElementById('spec-3')
+  const path1 = document.getElementById('path-1');
+  const path2 = document.getElementById('path-2');
+  const path3 = document.getElementById('path-3');
+  const path4 = document.getElementById('path-4');
+  
+  const tagTunnel = document.getElementById('tag-tunnel');
+  const tagSync = document.getElementById('tag-sync');
+  
+  const steps = [
+    document.getElementById('step-1'),
+    document.getElementById('step-2'),
+    document.getElementById('step-3'),
+    document.getElementById('step-4')
   ];
 
-  // 取得 DOM 元素的中心點座標
+  // 計算中心點座標
   function getCenter(el) {
     const rect = el.getBoundingClientRect();
-    const canvasRect = document.getElementById('canvas-area').getBoundingClientRect();
+    const canvasRect = canvasArea.getBoundingClientRect();
     return {
       x: rect.left - canvasRect.left + rect.width / 2,
       y: rect.top - canvasRect.top + rect.height / 2
     };
   }
 
-  // 重置模擬器狀態
+  // 動態繪製 SVG 連線與標籤位置
+  function drawLayout() {
+    const pA = getCenter(nBodyA);
+    const pB = getCenter(nBodyB);
+    const pC = getCenter(nFuncC);
+    const pD = getCenter(nFuncD);
+
+    // 畫線
+    path1.setAttribute('d', `M ${pA.x} ${pA.y} L ${pB.x} ${pB.y}`);
+    path2.setAttribute('d', `M ${pB.x} ${pB.y} L ${pC.x} ${pC.y}`);
+    path3.setAttribute('d', `M ${pC.x} ${pC.y} L ${pD.x} ${pD.y}`);
+    path4.setAttribute('d', `M ${pD.x} ${pD.y} L ${pA.x} ${pA.y}`);
+
+    // 定位標籤
+    tagTunnel.style.left = ((pA.x + pB.x) / 2 - 40) + 'px';
+    tagTunnel.style.top = (pA.y - 25) + 'px';
+    
+    tagSync.style.left = ((pD.x + pA.x) / 2 - 30) + 'px';
+    tagSync.style.top = ((pD.y + pA.y) / 2) + 'px';
+  }
+
+  window.addEventListener('resize', drawLayout);
+
+  // 系統重置
   function resetSim() {
+    drawLayout(); // 確保線條正確
     packet.style.display = 'none';
     packet.style.transition = 'none';
     btnStart.disabled = false;
+    document.querySelector('.header-sub').innerText = "STATUS: IDLE | DIMENSION: 2D";
     
-    // 移除特效
-    nodeA.classList.remove('active-pulse');
-    nodeB.classList.remove('active-pulse');
-    hwC.classList.remove('active-pulse');
-    hwC.style.opacity = '0.3';
-    hwC.style.borderColor = 'var(--color-highway)';
+    // 清除發光狀態
+    nBodyA.classList.remove('glow-a');
+    nBodyB.classList.remove('glow-b');
+    nFuncC.classList.remove('glow-c');
+    nFuncD.classList.remove('glow-d');
     
-    pathTunnel.classList.remove('path-active');
-    pathReturn.classList.remove('path-active');
+    // 清除線條狀態
+    [path1, path2, path3, path4].forEach(p => p.classList.remove('path-active'));
     
-    specs.forEach(spec => spec.classList.remove('active'));
+    // 清除文字高亮
+    steps.forEach(s => {
+      s.classList.remove('active');
+      s.style.borderColor = '#334155';
+    });
   }
 
-  // 封包移動非同步函式
-  async function movePacket(startPos, endPos, durationSec, color, pathEl = null) {
+  // 封包移動動畫 (支援非同步等待)
+  async function movePacket(startEl, endEl, duration, color, pathEl) {
+    const pStart = getCenter(startEl);
+    const pEnd = getCenter(endEl);
+    
     packet.style.display = 'block';
     packet.style.transition = 'none';
-    packet.style.left = startPos.x + 'px';
-    packet.style.top = startPos.y + 'px';
+    packet.style.left = pStart.x + 'px';
+    packet.style.top = pStart.y + 'px';
     packet.style.background = color;
     packet.style.boxShadow = `0 0 15px ${color}, 0 0 30px ${color}`;
     
-    if(pathEl) pathEl.classList.add('path-active');
+    pathEl.classList.add('path-active');
     pathEl.style.stroke = color;
 
-    await new Promise(r => setTimeout(r, 50)); // 強制渲染
+    await new Promise(r => setTimeout(r, 50)); // 強制重繪
     
-    packet.style.transition = `all ${durationSec}s cubic-bezier(0.4, 0, 0.2, 1)`;
-    packet.style.left = endPos.x + 'px';
-    packet.style.top = endPos.y + 'px';
+    packet.style.transition = `all ${duration}s cubic-bezier(0.4, 0, 0.2, 1)`;
+    packet.style.left = pEnd.x + 'px';
+    packet.style.top = pEnd.y + 'px';
     
-    await new Promise(r => setTimeout(r, durationSec * 1000));
-    if(pathEl) {
-      pathEl.classList.remove('path-active');
-      pathEl.style.stroke = '#334155'; // 恢復原色
-    }
+    await new Promise(r => setTimeout(r, duration * 1000));
+    
+    pathEl.classList.remove('path-active');
+    pathEl.style.stroke = ''; // 恢復原樣
   }
 
   // 啟動主流程
   async function startFlow() {
     resetSim();
     btnStart.disabled = true;
+    document.querySelector('.header-sub').innerText = "STATUS: EXECUTING | DIMENSION: CROSS-LAYER";
 
-    // 取得各點座標 (針對路徑做微調，不完全對齊中心以免重疊)
-    const pA = getCenter(nodeA);
-    const pB = getCenter(nodeB);
-    const pHwC = getCenter(hwC);
+    // --- STEP 1: 體 -> 體 ---
+    steps[0].classList.add('active');
+    steps[0].style.borderColor = 'var(--color-body-a)';
+    nBodyA.classList.add('glow-a');
     
-    const pStart = { x: pA.x + 40, y: pA.y };
-    const pMid1 = { x: pB.x - 70, y: pB.y };
-    const pMid2 = { x: pB.x - 7
+    await movePacket(nBodyA, nBodyB, 1.2, 'var(--color-body-a)', path1);
+    
+    nBodyA.classList.remove('glow-a');
+    steps[0].classList.remove('active');
+
+    // --- STEP 2: 體 ↓ 用 ---
+    steps[1].classList.add('active');
+    steps[1].style.borderColor = 'var(--color-body-b)';
+    nBodyB.classList.add('glow-b');
+    
+    await movePacket(nBodyB, nFuncC, 0.8, 'var(--color-body-b)', path2);
+    
+    nBodyB.classList.remove('glow-b');
+    steps[1].classList.remove('active');
+
+    // --- STEP 3: 用 -> 用 (思維運算) ---
+    steps[2].classList.add('active');
+    steps[2].style.borderColor = 'var(--color-func-c)';
+    nFuncC.classList.add('glow-c');
+    packet.style.display = 'none'; // 隱藏封包模擬內部運算
+    
+    await new Promise(r => setTimeout(r, 1500)); // 運算延遲
+    
+    await movePacket(nFuncC, nFuncD, 1.0, 'var(--color-func-c)', path3);
+    
+    nFuncC.classList.remove('glow-c');
+    steps[2].classList.remove('active');
+
+    // --- STEP 4: 用 ↑ 體 ---
+    steps[3].classList.add('active');
+    steps[3].style.borderColor = 'var(--color-func-d)';
+    nFuncD.classList.add('glow-d');
+    
+    await movePacket(nFuncD, nBodyA, 1.2, 'var(--color-func-d)', path4);
+    
+    nFuncD.classList.remove('glow-d');
+    nBodyA.classList.add('glow-a'); // 抵達終點亮起
+    packet.style.display = 'none';
+    
+    await new Promise(r => setTimeout(r, 500));
+    document.querySelector('.header-sub').innerText = "STATUS: COMPLETE | DIMENSION: 2D";
+    btnStart.disabled = false;
+  }
+
+  // 初始繪製
+  setTimeout(resetSim, 100);
+
+</script>
+</body>
+</html>
