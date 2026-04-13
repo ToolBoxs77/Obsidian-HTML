@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>全域聖典 4.0 體用合一映射矩陣</title>
+<style>
+  :root {
+    --bg-base: #0b0f19;
+    --bg-panel: #151b2b;
+    --border-dim: #2a3441;
+    --text-bright: #f8fafc;
+    --text-dim: #64748b;
+    
+    /* 任務專屬主題色 */
+    --color-fto: #f59e0b; /* 琥珀橘 */
+    --color-cot: #8b5cf6; /* 科技紫 */
+    --color-git: #10b981; /* 終端綠 */
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg-base);
+    color: var(--text-bright);
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    box-sizing: border-box;
+  }
+
+  .app-container {
+    width: 100%;
+    max-width: 900px;
+    background: var(--bg-panel);
+    border-radius: 12px;
+    border: 1px solid var(--border-dim);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* 頂部：任務控制列 */
+  .header-controls {
+    padding: 20px 25px;
+    background: #0f1423;
+    border-bottom: 1px solid var(--border-dim);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .header-title { margin: 0; font-size: 18px; color: #38bdf8; font-weight: bold; letter-spacing: 1px; }
+
+  .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+  
+  button {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    border: 1px solid var(--border-dim);
+    background: #1e293b;
+    color: var(--text-bright);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    flex: 1;
+    min-width: 150px;
+  }
+
+  button:hover { background: #334155; }
+  
+  .btn-reset { flex: 0.5; min-width: 100px; background: transparent; border-style: dashed; color: var(--text-dim); }
+  .btn-reset:hover { background: #ef4444; color: white; border-style: solid; border-color: #ef4444; }
+
+  /* 按鈕啟動狀態 */
+  .btn-fto.active { background: rgba(245, 158, 11, 0.1); border-color: var(--color-fto); color: var(--color-fto); box-shadow: 0 0 10px rgba(245, 158, 11, 0.2); }
+  .btn-cot.active { background: rgba(139, 92, 246, 0.1); border-color: var(--color-cot); color: #c4b5fd; box-shadow: 0 0 10px rgba(139, 92, 246, 0.2); }
+  .btn-git.active { background: rgba(16, 185, 129, 0.1); border-color: var(--color-git); color: var(--color-git); box-shadow: 0 0 10px rgba(16, 185, 129, 0.2); }
+
+  /* 中央：矩陣視圖 */
+  .matrix-area { padding: 30px 25px; }
+  
+  .grid-container {
+    display: grid;
+    grid-template-columns: 140px repeat(6, 1fr);
+    gap: 10px;
+  }
+
+  /* 標頭樣式 */
+  .grid-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: bold;
+    color: var(--text-dim);
+    text-align: center;
+    padding: 10px 5px;
+  }
+  .header-y { justify-content: flex-end; padding-right: 15px; text-align: right; border-right: 1px solid var(--border-dim); }
+  .header-x { border-bottom: 1px solid var(--border-dim); }
+
+  /* 矩陣交叉點 (Cell) */
+  .cell {
+    background: #0b0f19;
+    border: 1px solid #1e293b;
+    border-radius: 6px;
+    height: 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #334155;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .cell-status { font-size: 11px; margin-top: 4px; opacity: 0.7; }
+
+  /* 啟動發光特效 (Glow) */
+  .cell.glow-fto {
+    background: rgba(245, 158, 11, 0.15); border-color: var(--color-fto); color: var(--color-fto);
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.3) inset, 0 0 15px rgba(245, 158, 11, 0.4);
+    transform: scale(1.05); z-index: 10; font-weight: bold;
+  }
+  .cell.glow-cot {
+    background: rgba(139, 92, 246, 0.15); border-color: var(--color-cot); color: #c4b5fd;
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.3) inset, 0 0 15px rgba(139, 92, 246, 0.4);
+    transform: scale(1.05); z-index: 10; font-weight: bold;
+  }
+  .cell.glow-git {
+    background: rgba(16, 185, 129, 0.15); border-color: var(--color-git); color: var(--color-git);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3) inset, 0 0 15px rgba(16, 185, 129, 0.4);
+    transform: scale(1.05); z-index: 10; font-weight: bold;
+  }
+
+  /* 底部：動態解說區 */
+  .explanation-area {
+    padding: 20px 25px;
+    background: #0b0f19;
+    border-top: 1px solid var(--border-dim);
+    border-left: 4px solid var(--border-dim);
+    min-height: 80px;
+    transition: border-color 0.3s;
+  }
+
+  .explanation-title { margin: 0 0 10px 0; font-size: 14px; color: var(--text-bright); display: flex; align-items: center; gap: 8px; }
+  .explanation-text { margin: 0; font-size: 14px; line-height: 1.6; color: #cbd5e1; }
+
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  <div class="header-controls">
+    <h2 class="header-title">全域聖典 4.0 體用合一映射矩陣</h2>
+    <div class="btn-group">
+      <button id="btn-fto" class="btn-fto" onclick="activateTask('fto')">CAO 專利侵權判定 (FTO)</button>
+      <button id="btn-cot" class="btn-cot" onclick="activateTask('cot')">機電研發算力推演 (CoT)</button>
+      <button id="btn-git" class="btn-git" onclick="activateTask('git')">全域資料無縫同步 (Git Sync)</button>
+      <button class="btn-reset" onclick="resetMatrix()">🔄 重置矩陣</button>
+    </div>
+  </div>
+
+  <div class="matrix-area">
+    <div class="grid-container" id="grid">
+      </div>
+  </div>
+
+  <div class="explanation-area" id="exp-box">
+    <h3 class="explanation-title">📍 動態物理執行路徑解說</h3>
+    <p class="explanation-text" id="exp-text">矩陣預設為休眠狀態。請點擊上方任務按鈕以啟動映射。</p>
+  </div>
+</div>
+
+<script>
+  // 定義體用座標軸
+  const bodyY = [
+    { id: 'A', name: 'A (S24 行動端)' },
+    { id: 'B', name: 'B (128GB 母艦)' },
+    { id: 'C', name: 'C (雲端/多智能體)' }
+  ];
+  const useX = [
+    { id: 'A', name: 'A (感知)' },
+    { id: 'B', name: 'B (收割)' },
+    { id: 'C', name: 'C (思維)' },
+    { id: 'D', name: 'D (執行)' },
+    { id: 'Omega', name: 'Ω (逆向)' },
+    { id: '0', name: '0 (防禦)' }
+  ];
+
+  // 任務資料字典：綁定發光顏色、座標點與解說文字
+  const taskMap = {
+    fto: {
+      colorClass: 'glow-fto',
+      btnId: 'btn-fto',
+      borderColor: 'var(--color-fto)',
+      cells: ['B-B', 'B-C', 'B-0'],
+      desc: '母艦啟動重型 RAG。透過公路 B 爬取專利，交由公路 C 進行 FTO 邏輯拆解，並由公路 0 執行資安防禦。'
+    },
+    cot: {
+      colorClass: 'glow-cot',
+      btnId: 'btn-cot',
+      borderColor: 'var(--color-cot)',
+      cells: ['C-A', 'C-C', 'C-Omega'],
+      desc: '雲端啟動無限算力。由公路 A 接收參數，於公路 C 展開深度 CoT 思維鏈推演，並透過公路 Ω 逆向解析對手規格。'
+    },
+    git: {
+      colorClass: 'glow-git',
+      btnId: 'btn-git',
+      borderColor: 'var(--color-git)',
+      cells: ['A-A', 'B-D'],
+      desc: 'S24 行動端透過公路 A 捕獲即時靈感，直接穿透隧道，交由母艦的公路 D 執行 Git 同步寫入實體硬碟。'
+    }
+  };
+
+  const grid = document.getElementById('grid');
+
+  // 初始化繪製矩陣網格
+  function renderGrid() {
+    grid.innerHTML = ''; // 清空
+
+    // 1. 左上角空白格
+    grid.appendChild(createDiv('grid-header', ''));
+
+    // 2. 繪製 X 軸 (用 - 公路)
+    useX.forEach(x => {
+      grid.appendChild(createDiv('grid-header header-x', x.name));
+    });
+
+    // 3. 繪製 Y 軸與資料格
+    bodyY.forEach(y => {
+      // 繪製 Y 軸 (體 - 工作流)
+      grid.appendChild(createDiv('grid-header header-y', y.name));
+      
+      // 繪製該列的 6 個資料格
+      useX.forEach(x => {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.id = `cell-${y.id}-${x.id}`; // 給予精確座標 ID (例: cell-B-C)
+        
+        cell.innerHTML = `<span>休眠</span><span class="cell-status">Dormant</span>`;
+        grid.appendChild(cell);
+      });
+    });
+  }
+
+  // 輔助函式：創建 DIV
+  function createDiv(className, text) {
+    const el = document.createElement('div');
+    el.className = className;
+    el.innerText = text;
+    return el;
+  }
+
+  // 系統重置 (清除所有狀態)
+  function resetMatrix(isFullReset = true) {
+    // 移除按鈕啟動狀態
+    document.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+    
+    // 移除所有方格的發光狀態，恢復休眠文字
+    document.querySelectorAll('.cell').forEach(cell => {
+      cell.className = 'cell'; // 重置回預設 class
+      cell.innerHTML = `<span>休眠</span><span class="cell-status">Dormant</span>`;
+    });
+
+    // 若為手動全域重置，恢復解說文字
+    if (isFullReset) {
+      document.getElementById('exp-text').innerText = '矩陣預設為休眠狀態。請點擊上方任務按鈕以啟動映射。';
+      document.getElementById('exp-box').style.borderLeftColor = 'var(--border-dim)';
+    }
+  }
+
+  // 啟動特定任務
+  function activateTask(taskKey) {
+    // 防呆：先清空所有網格啟動狀態
+    resetMatrix(false); 
+
+    const data = taskMap[taskKey];
+    
+    // 1. 按鈕高亮
+    document.getElementById(data.btnId).classList.add('active');
+
+    // 2. 點亮對應座標網格
+    data.cells.forEach(coord => {
+      const cell = document.getElementById(`cell-${coord}`);
+      if (cell) {
+        cell.classList.add(data.colorClass);
+        cell.innerHTML = `<span>活躍</span><span class="cell-status">Active</span>`;
+      }
+    });
+
+    // 3. 更新解說文字與邊條顏色
+    document.getElementById('exp-text').innerText = data.desc;
+    document.getElementById('exp-box').style.borderLeftColor = data.borderColor;
+  }
+
+  // 頁面載入時初始化
+  window.onload = renderGrid;
+
+</script>
+</body>
+</html>
