@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>全域聖典 4.0 體用合一動態映射圖</title>
+<style>
+  :root {
+    --bg-dark: #090c15;
+    --panel-bg: #111827;
+    --border-color: #1f2937;
+    --text-main: #f3f4f6;
+    --text-muted: #9ca3af;
+    
+    /* 節點顏色 */
+    --color-node-a: #10b981; /* S24 綠色 */
+    --color-node-b: #f59e0b; /* 母艦 橘色 */
+    --color-node-c: #3b82f6; /* 雲端 藍色 */
+    --color-highway: #8b5cf6; /* 公路 紫色 */
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg-dark);
+    color: var(--text-main);
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 950px;
+    background: var(--panel-bg);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.7);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* 頂部標題 */
+  .header {
+    background: #0f172a;
+    padding: 15px 25px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 16px;
+    font-weight: bold;
+    color: #38bdf8;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /* 主要佈局 */
+  .main-layout {
+    display: flex;
+    height: 550px;
+  }
+
+  /* 左側畫布區 */
+  .canvas {
+    flex: 2;
+    position: relative;
+    background: #0b0f19;
+    padding: 20px;
+    overflow: hidden;
+    border-right: 1px solid var(--border-color);
+  }
+
+  /* 層級標籤 */
+  .layer-label {
+    position: absolute;
+    font-size: 12px;
+    font-weight: bold;
+    color: #475569;
+    letter-spacing: 2px;
+    padding: 5px 10px;
+    border: 1px dashed #334155;
+    border-radius: 6px;
+  }
+  .layer-physical { top: 20px; left: 20px; }
+  .layer-neural { bottom: 20px; left: 20px; }
+
+  /* 節點 (體) */
+  .node {
+    position: absolute;
+    padding: 15px;
+    border-radius: 10px;
+    background: #1e293b;
+    border: 2px solid #334155;
+    text-align: center;
+    font-weight: bold;
+    font-size: 14px;
+    z-index: 5;
+    transition: all 0.3s;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+  }
+  .node small { display: block; font-size: 11px; color: var(--text-muted); margin-top: 5px; font-weight: normal; }
+  
+  #node-a { top: 150px; left: 50px; border-color: var(--color-node-a); }
+  #node-b { top: 150px; left: 300px; border-color: var(--color-node-b); width: 140px; }
+  #node-c { top: 150px; left: 550px; border-color: var(--color-node-c); opacity: 0.5; } /* 此次任務未使用雲端，故淡化 */
+
+  /* 神經公路 (用) */
+  .highway-box {
+    position: absolute;
+    background: #1e1b4b;
+    border: 1px dashed var(--color-highway);
+    color: #c4b5fd;
+    font-size: 12px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    z-index: 6;
+    opacity: 0.3;
+    transition: all 0.3s;
+  }
+  #hw-c { top: 260px; left: 310px; width: 120px; text-align: center; } /* 位於母艦下方，代表內部運算 */
+  
+  /* SVG 連線 */
+  svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+  .path-line { stroke: #334155; stroke-width: 3; stroke-dasharray: 6,6; fill: none; transition: all 0.3s; }
+  .path-active { stroke: #fff; stroke-dasharray: none; filter: drop-shadow(0 0 8px rgba(255,255,255,0.8)); }
+  
+  /* 連線標籤 */
+  .path-label { position: absolute; font-size: 11px; color: #94a3b8; background: #0b0f19; padding: 2px 5px; z-index: 2; border-radius: 4px; }
+  #label-tunnel { top: 135px; left: 180px; }
+  #label-hwd { top: 220px; left: 180px; }
+
+  /* 動態光點 */
+  #packet {
+    position: absolute; width: 16px; height: 16px; background: white; border-radius: 50%;
+    box-shadow: 0 0 15px white, 0 0 30px white; z-index: 10; display: none;
+    margin-top: -8px; margin-left: -8px;
+  }
+
+  /* 動畫特效 */
+  .active-pulse { animation: nodePulse 1s infinite alternate; }
+  @keyframes nodePulse { from { box-shadow: 0 0 10px currentColor; transform: scale(1); } to { box-shadow: 0 0 25px currentColor; transform: scale(1.05); } }
+
+  /* 右側側邊欄 */
+  .sidebar {
+    flex: 1;
+    background: #111827;
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .sidebar h3 { margin: 0; font-size: 15px; color: #f3f4f6; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+  
+  .tech-specs { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 15px; flex: 1; }
+  .spec-item { font-size: 13px; line-height: 1.6; color: var(--text-muted); background: #1f2937; padding: 12px; border-radius: 8px; border-left: 3px solid transparent; transition: all 0.3s; }
+  .spec-item.active { background: #374151; color: #fff; border-left-color: #38bdf8; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+  
+  .controls { display: flex; gap: 10px; }
+  button { padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; flex: 1; transition: 0.2s; }
+  .btn-start { background: var(--color-node-b); color: #000; }
+  .btn-start:hover { background: #d97706; }
+  .btn-start:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-reset { background: #374151; color: white; flex: 0.5; }
+  .btn-reset:hover { background: #4b5563; }
+
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <span>🛡️ 當前任務流：CAO 專利侵權判定 (FTO)</span>
+    <span style="font-size: 12px; color: #64748b;">全域聖典 4.0 體用合一動態映射圖</span>
+  </div>
+
+  <div class="main-layout">
+    <div class="canvas" id="canvas-area">
+      <div class="layer-label layer-physical">【體】物理載體層</div>
+      <div class="layer-label layer-neural">【用】神經公路層</div>
+
+      <svg>
+        <path id="path-tunnel" class="path-line" d="M 120 180 L 300 180" />
+        <path id="path-return" class="path-line" d="M 300 200 L 120 200" />
+        <path class="path-line" d="M 440 180 L 550 180" />
+      </svg>
+
+      <div class="path-label" id="label-tunnel">Tailscale 隧道 (入口)</div>
+      <div class="path-label" id="label-hwd">公路 D (執行/同步回 Obsidian)</div>
+
+      <div class="node" id="node-a" style="color: var(--color-node-a);">
+        節點 A<br><small>S24 Ultra (手機)<br/>[ 工作流 A ]</small>
+      </div>
+      <div class="node" id="node-b" style="color: var(--color-node-b);">
+        節點 B<br><small>128GB 母艦 (伺服器)<br/>[ 工作流 B ]</small>
+      </div>
+      <div class="node" id="node-c" style="color: var(--color-node-c);">
+        節點 C<br><small>雲端節點<br/>[ 外部 API ]</small>
+      </div>
+
+      <div class="highway-box" id="hw-c">公路 C<br/>(思維 / FTO編排)</div>
+
+      <div id="packet"></div>
+    </div>
+
+    <div class="sidebar">
+      <h3>技術規範說明</h3>
+      <ul class="tech-specs">
+        <li class="spec-item" id="spec-1">
+          <b>階段 1：實體穿透</b><br/>資料從工作流 A (S24 手機) 發出，繞過公網，安全穿透 Tailscale 虛擬內網隧道，抵達工作流 B (母艦)。
+        </li>
+        <li class="spec-item" id="spec-2">
+          <b>階段 2：公路 C 運算</b><br/>進入神經公路層，於公路 C 展開 FTO (專利侵權判定) 邏輯拆解、記憶體檢索與思維編排運算。
+        </li>
+        <li class="spec-item" id="spec-3">
+          <b>階段 3：公路 D 執行寫回</b><br/>運算完畢，由公路 D 接手執行層指令，將分析結果無縫同步寫回前端 Obsidian (工作流 A)。
+        </li>
+      </ul>
+      
+      <div class="controls">
+        <button id="btn-start" class="btn-start" onclick="startFlow()">啟動任務流</button>
+        <button class="btn-reset" onclick="resetSim()">重置</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const btnStart = document.getElementById('btn-start');
+  const packet = document.getElementById('packet');
+  const pathTunnel = document.getElementById('path-tunnel');
+  const pathReturn = document.getElementById('path-return');
+  
+  const nodeA = document.getElementById('node-a');
+  const nodeB = document.getElementById('node-b');
+  const hwC = document.getElementById('hw-c');
+  
+  const specs = [
+    document.getElementById('spec-1'),
+    document.getElementById('spec-2'),
+    document.getElementById('spec-3')
+  ];
+
+  // 取得 DOM 元素的中心點座標
+  function getCenter(el) {
+    const rect = el.getBoundingClientRect();
+    const canvasRect = document.getElementById('canvas-area').getBoundingClientRect();
+    return {
+      x: rect.left - canvasRect.left + rect.width / 2,
+      y: rect.top - canvasRect.top + rect.height / 2
+    };
+  }
+
+  // 重置模擬器狀態
+  function resetSim() {
+    packet.style.display = 'none';
+    packet.style.transition = 'none';
+    btnStart.disabled = false;
+    
+    // 移除特效
+    nodeA.classList.remove('active-pulse');
+    nodeB.classList.remove('active-pulse');
+    hwC.classList.remove('active-pulse');
+    hwC.style.opacity = '0.3';
+    hwC.style.borderColor = 'var(--color-highway)';
+    
+    pathTunnel.classList.remove('path-active');
+    pathReturn.classList.remove('path-active');
+    
+    specs.forEach(spec => spec.classList.remove('active'));
+  }
+
+  // 封包移動非同步函式
+  async function movePacket(startPos, endPos, durationSec, color, pathEl = null) {
+    packet.style.display = 'block';
+    packet.style.transition = 'none';
+    packet.style.left = startPos.x + 'px';
+    packet.style.top = startPos.y + 'px';
+    packet.style.background = color;
+    packet.style.boxShadow = `0 0 15px ${color}, 0 0 30px ${color}`;
+    
+    if(pathEl) pathEl.classList.add('path-active');
+    pathEl.style.stroke = color;
+
+    await new Promise(r => setTimeout(r, 50)); // 強制渲染
+    
+    packet.style.transition = `all ${durationSec}s cubic-bezier(0.4, 0, 0.2, 1)`;
+    packet.style.left = endPos.x + 'px';
+    packet.style.top = endPos.y + 'px';
+    
+    await new Promise(r => setTimeout(r, durationSec * 1000));
+    if(pathEl) {
+      pathEl.classList.remove('path-active');
+      pathEl.style.stroke = '#334155'; // 恢復原色
+    }
+  }
+
+  // 啟動主流程
+  async function startFlow() {
+    resetSim();
+    btnStart.disabled = true;
+
+    // 取得各點座標 (針對路徑做微調，不完全對齊中心以免重疊)
+    const pA = getCenter(nodeA);
+    const pB = getCenter(nodeB);
+    const pHwC = getCenter(hwC);
+    
+    const pStart = { x: pA.x + 40, y: pA.y };
+    const pMid1 = { x: pB.x - 70, y: pB.y };
+    const pMid2 = { x: pB.x - 7
