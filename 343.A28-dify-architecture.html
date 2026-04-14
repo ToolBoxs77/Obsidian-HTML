@@ -14,35 +14,39 @@
     --api: #10b981;
     --line: #475569;
   }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; padding: 20px; margin: 0; }
-  .container { width: 100%; max-width: 850px; background: var(--card-bg); padding: 25px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.6); }
   
-  /* 頂部控制列 */
-  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 15px; }
-  .controls select { padding: 10px; border-radius: 6px; background: #2a2a35; color: white; border: 1px solid #555; font-size: 15px; cursor: pointer; font-weight: bold; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; padding: 15px; margin: 0; box-sizing: border-box;}
+  .container { width: 100%; max-width: 850px; background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.6); box-sizing: border-box; }
   
-  /* 畫布與三欄佈局 */
-  .canvas { position: relative; height: 400px; background: #181825; border-radius: 8px; border: 1px solid #333; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; padding: 0 40px; overflow: hidden; }
+  /* 頂部控制列：改為自適應彈性佈局 */
+  .header { display: flex; flex-direction: column; gap: 15px; text-align: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px; }
+  .controls select { padding: 12px; border-radius: 6px; background: #2a2a35; color: white; border: 1px solid #555; font-size: 15px; cursor: pointer; font-weight: bold; width: 100%; }
+  
+  /* 畫布佈局：手機版預設為垂直堆疊 */
+  .canvas { 
+    position: relative; 
+    min-height: 450px; 
+    background: #181825; border-radius: 8px; border: 1px solid #333; margin-bottom: 20px; 
+    display: flex; flex-direction: column; /* 垂直堆疊 */
+    justify-content: space-between; align-items: center; 
+    padding: 30px 20px; overflow: hidden; gap: 20px;
+  }
   
   /* 節點通用樣式 */
   .node { padding: 12px 18px; border-radius: 8px; font-weight: bold; text-align: center; background: #252535; z-index: 2; position: relative; border: 2px solid transparent; transition: 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
   .node small { display: block; font-size: 12px; font-weight: normal; color: #aaa; margin-top: 4px; }
   .node.active { transform: scale(1.05); }
 
-  /* 三大核心節點 */
   #node-mobile { border-color: var(--obsidian); }
   #node-api { border-color: var(--api); }
   
-  /* Dify 樞紐專屬區域 */
   .hub-container { display: flex; flex-direction: column; align-items: center; gap: 15px; position: relative; transition: 0.3s; }
   #node-dify { border-color: var(--dify); padding: 15px 30px; font-size: 16px; background: #2d2418; }
   
-  /* Dify 內部子工具 */
-  .sub-tools { display: flex; gap: 10px; opacity: 1; transition: 0.3s; }
+  .sub-tools { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; opacity: 1; transition: 0.3s; }
   .sub-node { font-size: 11px; padding: 6px 10px; background: #333; border: 1px dashed var(--dify); border-radius: 6px; color: #fcd34d; transition: 0.3s; }
   .sub-node.pulse { background: var(--dify); color: #000; box-shadow: 0 0 10px var(--dify); }
 
-  /* 關閉模式時的樣式 (隱藏 Dify) */
   .mode-standalone .hub-container { opacity: 0.2; filter: grayscale(100%); }
   
   /* SVG 連線 */
@@ -50,12 +54,11 @@
   .path-line { stroke: var(--line); stroke-width: 2; stroke-dasharray: 5,5; fill: none; transition: 0.3s; }
   .path-active { stroke: #fff; stroke-width: 3; stroke-dasharray: none; filter: drop-shadow(0 0 5px rgba(255,255,255,0.5)); }
 
-  /* 動畫封包 */
   #packet { position: absolute; width: 14px; height: 14px; background: white; border-radius: 50%; box-shadow: 0 0 12px white; z-index: 10; display: none; margin-top: -7px; margin-left: -7px; }
 
-  /* 底部按鈕與狀態 */
-  .actions { display: flex; gap: 10px; }
-  button { padding: 12px 20px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 15px; }
+  /* 底部按鈕：改為上下或左右自適應 */
+  .actions { display: flex; flex-direction: column; gap: 10px; }
+  button { padding: 14px 20px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 15px; }
   .btn-send { background: var(--obsidian); color: white; flex: 1; }
   .btn-send:hover { background: #7c3aed; }
   .btn-reset { background: #475569; color: white; }
@@ -64,6 +67,15 @@
 
   #status-box { margin-top: 15px; padding: 15px; background: #000; border-radius: 8px; border-left: 4px solid var(--obsidian); font-size: 14px; line-height: 1.6; color: #4ade80; min-height: 50px; }
 
+  /* =========================================
+     電腦與平板自適應 (寬度 >= 768px 時橫向排列) 
+  ========================================= */
+  @media (min-width: 768px) {
+    .header { flex-direction: row; justify-content: space-between; text-align: left; }
+    .controls select { width: auto; min-width: 300px; }
+    .canvas { flex-direction: row; height: 400px; min-height: 400px; padding: 0 40px; gap: 0; }
+    .actions { flex-direction: row; }
+  }
 </style>
 </head>
 <body>
@@ -94,9 +106,9 @@
 
     <div class="hub-container" id="hub-zone">
       <div class="sub-tools" id="sub-tools">
-        <div class="sub-node" id="tool-prompt">⚙️ 系統級 Prompt 注入</div>
+        <div class="sub-node" id="tool-prompt">⚙️ 系統級 Prompt</div>
         <div class="sub-node" id="tool-rag">📚 RAG 知識庫</div>
-        <div class="sub-node" id="tool-search">🔍 Google 搜尋工具</div>
+        <div class="sub-node" id="tool-search">🔍 搜尋工具</div>
       </div>
       <div class="node" id="node-dify">
         🧠 雲端/地端中樞<br><small>128GB 母艦 (Dify)</small>
@@ -123,13 +135,10 @@
   const statusBox = document.getElementById('status-box');
   const packet = document.getElementById('packet');
   
-  // Nodes
   const nodeMobile = document.getElementById('node-mobile');
   const nodeDify = document.getElementById('node-dify');
   const nodeApi = document.getElementById('node-api');
-  const hubZone = document.getElementById('hub-zone');
   
-  // SVG Lines
   const lineDirect = document.getElementById('line-direct');
   const lineToDify = document.getElementById('line-to-dify');
   const lineFromDify = document.getElementById('line-from-dify');
@@ -144,42 +153,47 @@
     };
   }
 
-  // 繪製 SVG 連線
+  // 核心魔法：智慧判斷直向或橫向來繪製 SVG 連線
   function drawLines() {
     const pMobile = getCenter(nodeMobile);
     const pDify = getCenter(nodeDify);
     const pApi = getCenter(nodeApi);
 
-    // 畫一條美麗的曲線 (直連)
-    lineDirect.setAttribute('d', `M ${pMobile.x} ${pMobile.y} Q ${pMobile.x + 300} ${pMobile.y - 150} ${pApi.x} ${pApi.y}`);
-    // 直線 (CAO)
+    // 判斷目前是垂直佈局(手機)還是水平佈局(電腦)
+    const isVertical = Math.abs(pMobile.y - pApi.y) > Math.abs(pMobile.x - pApi.x);
+
+    if (isVertical) {
+      // 直向版面：拋物線向「右」彎曲繞過 Dify
+      lineDirect.setAttribute('d', `M ${pMobile.x} ${pMobile.y} Q ${pMobile.x + 200} ${(pMobile.y + pApi.y)/2} ${pApi.x} ${pApi.y}`);
+    } else {
+      // 橫向版面：拋物線向「上」彎曲繞過 Dify
+      lineDirect.setAttribute('d', `M ${pMobile.x} ${pMobile.y} Q ${(pMobile.x + pApi.x)/2} ${pMobile.y - 180} ${pApi.x} ${pApi.y}`);
+    }
+
+    // CAO 直線連線
     lineToDify.setAttribute('d', `M ${pMobile.x} ${pMobile.y} L ${pDify.x} ${pDify.y}`);
     lineFromDify.setAttribute('d', `M ${pDify.x} ${pDify.y} L ${pApi.x} ${pApi.y}`);
   }
 
-  // 視窗縮放時重繪線條
+  // 視窗縮放時自動重新計算線條
   window.addEventListener('resize', drawLines);
 
   function setStatus(msg) { statusBox.innerHTML = msg; }
 
-  // 核心：重置系統狀態
   function resetSim() {
-    drawLines(); // 確保線條位置正確
+    drawLines(); 
     const mode = modeSelect.value;
     
-    // 停止動畫與重置按鈕
     packet.style.display = 'none';
     packet.style.transition = 'none';
     btnSend.disabled = false;
     
-    // 移除發光特效
     nodeMobile.classList.remove('active');
     nodeDify.classList.remove('active');
     nodeApi.classList.remove('active');
     document.querySelectorAll('.sub-node').forEach(n => n.classList.remove('pulse'));
     document.querySelectorAll('.path-line').forEach(l => l.classList.remove('path-active'));
 
-    // 根據模式切換 UI 顯示與初始文字
     if (mode === 'standalone') {
       canvasArea.classList.add('mode-standalone');
       lineDirect.style.opacity = '1';
@@ -195,7 +209,6 @@
     }
   }
 
-  // 光點移動動畫函數
   async function movePacket(startEl, endEl, duration, color = 'white', pathEl = null) {
     const start = getCenter(startEl);
     const end = getCenter(endEl);
@@ -209,7 +222,7 @@
     
     if(pathEl) pathEl.classList.add('path-active');
 
-    await new Promise(r => setTimeout(r, 50)); // 強制重新渲染
+    await new Promise(r => setTimeout(r, 50)); 
     
     packet.style.transition = `all ${duration}s cubic-bezier(0.4, 0, 0.2, 1)`;
     packet.style.left = end.x + 'px';
@@ -219,7 +232,6 @@
     if(pathEl) pathEl.classList.remove('path-active');
   }
 
-  // 子節點閃爍動畫
   async function pulseSubNodes() {
     const nodes = [document.getElementById('tool-prompt'), document.getElementById('tool-rag'), document.getElementById('tool-search')];
     for (let node of nodes) {
@@ -229,14 +241,12 @@
     }
   }
 
-  // 執行流程
   async function startFlow() {
     btnSend.disabled = true;
     packet.style.display = 'none';
     const mode = modeSelect.value;
 
     if (mode === 'standalone') {
-      // ===== 獨立戶流程 =====
       setStatus("📡 發送提問：繞過中樞，手機直接呼叫外部 API...");
       nodeMobile.classList.add('active');
       await movePacket(nodeMobile, nodeApi, 1.2, '#10b981', lineDirect);
@@ -254,7 +264,6 @@
       setStatus("<b>這是獨立戶：手機直接問雲端，沒有記憶、沒有本地檔案、沒有邏輯串接。</b>");
 
     } else {
-      // ===== Dify 工作流樞紐流程 =====
       setStatus("🚀 發送提問：觸發工作流，訊號送至 Dify 母艦...");
       nodeMobile.classList.add('active');
       await movePacket(nodeMobile, nodeDify, 1.0, '#f59e0b', lineToDify);
@@ -293,7 +302,6 @@
     btnSend.disabled = false;
   }
 
-  // 啟動初始化
   setTimeout(resetSim, 100); 
 </script>
 
