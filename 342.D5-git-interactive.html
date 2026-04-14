@@ -3,95 +3,185 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Git 雙地協作同步邏輯測試</title>
 <style>
-  /* 基礎設定與置中 */
+  /* 基礎設定 */
   body { 
-    background: #222; color: white; text-align: center; font-family: sans-serif; 
-    margin: 0; padding: 20px; box-sizing: border-box; 
+    background: #1e1e2e; color: #cdd6f4; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+    margin: 0; padding: 20px; box-sizing: border-box; text-align: center;
   }
-  .container { max-width: 600px; margin: 0 auto; }
+  .container { max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+  h2 { margin-top: 0; color: #89b4fa; }
 
-  /* 狀態框使用 Flexbox 自動伸縮 */
-  .boxes { 
-    display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 20px; 
-  }
-  .box { 
-    border: 1px solid #555; padding: 15px 10px; border-radius: 6px; background: #333; 
-    flex: 1 1 80px; min-width: 80px; 
+  /* 視覺區塊配置 */
+  .architecture { 
+    display: flex; flex-direction: column; align-items: center; gap: 15px; width: 100%;
+    background: #313244; padding: 20px; border-radius: 12px; box-sizing: border-box;
   }
 
-  /* 按鈕使用 CSS Grid 自動排版 */
-  .buttons { 
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-bottom: 20px; 
+  /* 雲端節點 */
+  .cloud-node {
+    background: #89b4fa; color: #11111b; padding: 15px 30px; border-radius: 8px; font-weight: bold;
+    width: fit-content; margin: 0 auto; border: 2px solid #b4befe;
   }
+
+  /* 地端電腦並排 */
+  .local-nodes {
+    display: flex; justify-content: space-around; width: 100%; gap: 15px; flex-wrap: wrap;
+  }
+  
+  .pc-node {
+    background: #45475a; padding: 15px; border-radius: 8px; flex: 1; min-width: 150px;
+    border: 2px solid #585b70; display: flex; flex-direction: column; gap: 5px;
+  }
+  .pc-node h3 { margin: 0; font-size: 16px; color: #f38ba8; }
+  .pc-node.pc-b h3 { color: #a6e3a1; }
+  
+  .status-text { font-size: 24px; font-weight: bold; margin: 10px 0; color: #f9e2af; }
+
+  /* 操作面板 */
+  .control-panel {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px;
+    background: #313244; padding: 20px; border-radius: 12px; box-sizing: border-box;
+  }
+  
+  .control-group { display: flex; flex-direction: column; gap: 8px; }
+  .control-group h4 { margin: 0; font-size: 14px; color: #cba6f7; border-bottom: 1px dashed #585b70; padding-bottom: 5px; }
+
   button { 
-    padding: 12px; cursor: pointer; background: #444; color: white; border: 1px solid #666; 
-    border-radius: 6px; font-size: 14px; transition: 0.2s; font-weight: bold;
+    padding: 10px; cursor: pointer; background: #585b70; color: white; border: none; 
+    border-radius: 6px; font-size: 13px; font-weight: bold; transition: 0.2s; 
   }
-  button:hover { background: #555; }
+  button:hover { background: #7f849c; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  
+  .btn-push { background: #89b4fa; color: #11111b; }
+  .btn-push:hover { background: #b4befe; }
+  .btn-pull { background: #a6e3a1; color: #11111b; }
+  .btn-pull:hover { background: #94e2d5; }
+  .btn-edit { background: #f38ba8; color: #11111b; }
+  .btn-edit:hover { background: #eba0ac; }
 
-  #msg { color: #f0ad4e; margin: 15px; min-height: 20px; font-weight: bold; }
-  hr { border-color: #444; margin: 20px 0; }
+  /* 訊息框 */
+  #msg-box { 
+    background: #181825; padding: 15px; border-radius: 8px; font-weight: bold; 
+    color: #f9e2af; border-left: 4px solid #f9e2af; min-height: 20px;
+  }
 </style>
 </head>
 <body>
-  
-  <div class="container">
-    <h3>Git 邏輯測試版 (防呆修復版)</h3>
-    
-    <div class="boxes">
-      <div class="box">工作區: <br><b id="ws" style="font-size: 20px;">0</b></div>
-      <div class="box">地端: <br><b id="loc" style="font-size: 20px;">v1</b></div>
-      <div class="box">雲端: <br><b id="rem" style="font-size: 20px;">v1</b></div>
+
+<div class="container">
+  <h2>Git 雙地同步邏輯模擬器</h2>
+
+  <div class="architecture">
+    <div class="cloud-node">
+      ☁️ 雲端倉庫 (Remote)<br>
+      <span class="status-text" id="status-cloud">v1</span>
     </div>
-    
-    <hr>
-    
-    <div class="buttons">
-      <button onclick="edit()">修改筆記</button>
-      <button onclick="commit()">Commit</button>
-      <button onclick="push()">Push</button>
-      <button onclick="sim()" style="background: #a65a28; border-color: #d9822b;">同事上傳</button>
-      <button onclick="pull()">Pull</button>
+
+    <div style="color: #6c7086; font-weight: bold;">↑ 網路同步 ↓</div>
+
+    <div class="local-nodes">
+      <div class="pc-node">
+        <h3>💻 電腦 A (辦公室)</h3>
+        <small>未提交修改: <span id="ws-a">0</span></small>
+        <span>本地版本: <b class="status-text" id="status-a">v1</b></span>
+      </div>
+      
+      <div class="pc-node pc-b">
+        <h3>💻 電腦 B (家裡)</h3>
+        <small>未提交修改: <span id="ws-b">0</span></small>
+        <span>本地版本: <b class="status-text" id="status-b">v1</b></span>
+      </div>
     </div>
-    
-    <div id="msg">等待操作...</div>
   </div>
 
-  <script>
-    let ws=0, loc=1, rem=1;
-    
-    function update() {
-      document.getElementById('ws').innerText = ws;
-      document.getElementById('loc').innerText = 'v' + loc;
-      document.getElementById('rem').innerText = 'v' + rem;
-    }
+  <div class="control-panel">
+    <div class="control-group">
+      <h4 style="color: #f38ba8;">操作電腦 A</h4>
+      <button class="btn-edit" onclick="action('edit', 'A')">1. 寫筆記並 Commit</button>
+      <button class="btn-push" onclick="action('push', 'A')">2. Push 上雲端</button>
+      <button class="btn-pull" onclick="action('pull', 'A')">3. Pull 下載雲端</button>
+    </div>
 
-    // 修復：將原本的 msg 函數改名為 showMsg，避免與 HTML 的 id="msg" 產生全域衝突
-    function showMsg(t) { 
-      document.getElementById('msg').innerText = t; 
-    }
+    <div class="control-group">
+      <h4 style="color: #a6e3a1;">操作電腦 B</h4>
+      <button class="btn-edit" onclick="action('edit', 'B')">1. 寫筆記並 Commit</button>
+      <button class="btn-push" onclick="action('push', 'B')">2. Push 上雲端</button>
+      <button class="btn-pull" onclick="action('pull', 'B')">3. Pull 下載雲端</button>
+    </div>
+  </div>
 
-    function edit() { ws++; update(); showMsg("您修改了檔案"); }
+  <div id="msg-box">系統就緒。目前三方版本皆為 v1。</div>
+</div>
+
+<script>
+  // 狀態變數：雲端版本、電腦A版本、A未提交數量、電腦B版本、B未提交數量
+  let state = {
+    cloud: 1,
+    A: { ver: 1, ws: 0 },
+    B: { ver: 1, ws: 0 }
+  };
+
+  function updateUI() {
+    document.getElementById('status-cloud').innerText = 'v' + state.cloud;
     
-    function commit() { 
-      if(ws>0) { loc++; ws=0; update(); showMsg("Commit 成功"); } 
-      else { showMsg("沒東西可存"); } 
-    }
+    document.getElementById('status-a').innerText = 'v' + state.A.ver;
+    document.getElementById('ws-a').innerText = state.A.ws;
     
-    function push() { 
-      if(loc>rem && ws===0) { rem=loc; update(); showMsg("Push 成功"); } 
-      else { showMsg("無法 Push (請先確認已 Commit 且地端版本較新)"); } 
-    }
+    document.getElementById('status-b').innerText = 'v' + state.B.ver;
+    document.getElementById('ws-b').innerText = state.B.ws;
+  }
+
+  function showMsg(text, color = '#f9e2af') {
+    const box = document.getElementById('msg-box');
+    box.innerText = text;
+    box.style.borderLeftColor = color;
+    box.style.color = color;
+  }
+
+  // 核心邏輯處理函數
+  function action(type, pc) {
+    const me = state[pc];
     
-    function sim() { 
-      rem++; update(); showMsg("警告：雲端有新版 v" + rem); 
+    if (type === 'edit') {
+      me.ws++; 
+      me.ver++; // 模擬 Commit 後本地版本推進
+      me.ws = 0; // Commit 完了工作區清空
+      updateUI();
+      showMsg(`【電腦 ${pc}】修改並 Commit 完成，本地進度來到 v${me.ver}。`, '#89b4fa');
+    } 
+    else if (type === 'push') {
+      // Push 檢查：如果雲端比較新，拒絕 Push (會引發衝突)
+      if (state.cloud > me.ver) {
+        showMsg(`【失敗】電腦 ${pc} 嘗試 Push，但雲端有別人上傳的新版本 (v${state.cloud})！必須先 Pull 才能 Push！`, '#f38ba8');
+      } else if (me.ver > state.cloud) {
+        state.cloud = me.ver;
+        updateUI();
+        showMsg(`【成功】電腦 ${pc} 將本地 v${me.ver} Push 上雲端！`, '#a6e3a1');
+      } else {
+        showMsg(`電腦 ${pc} 版本與雲端一致，無須 Push。`, '#9399b2');
+      }
     }
-    
-    function pull() { 
-      if(rem>loc) { loc=rem; ws=0; update(); showMsg("Pull 成功"); } 
-      else { showMsg("已是最新版"); } 
+    else if (type === 'pull') {
+      // Pull 邏輯：分為單純下載 (Fast-forward) 或 需要合併 (Merge)
+      if (state.cloud > me.ver) {
+        if (me.ver < state.cloud && me.ver !== state[pc === 'A' ? 'B' : 'A'].ver - (state.cloud - state[pc === 'A' ? 'B' : 'A'].ver) ) { //簡化的衝突模擬
+          // 這裡做一個非常簡化的合併模擬：假設兩邊都改了，Pull 下來後版本號會推進到雲端的最新版 +1 (因為產生了 merge commit)
+           showMsg(`【合併】雲端有新版 v${state.cloud}。電腦 ${pc} 執行 Pull，自動合併 (Merge) 完成！本地進度更新。`, '#f9e2af');
+           me.ver = state.cloud + 1; // 模擬 Merge Commit
+        } else {
+           me.ver = state.cloud;
+           showMsg(`【成功】電腦 ${pc} 執行 Pull，同步雲端最新版 v${state.cloud} (Fast-forward)。`, '#a6e3a1');
+        }
+        updateUI();
+      } else {
+        showMsg(`電腦 ${pc} 已是最新版，無須 Pull。`, '#9399b2');
+      }
     }
-  </script>
+  }
+</script>
+
 </body>
 </html>
