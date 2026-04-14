@@ -2,36 +2,67 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Git 狀態機模擬器 (自適應版)</title>
 <style>
-  body { font-family: sans-serif; background: #1a1a1a; color: #fff; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-  .container { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 15px; }
-  
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #1a1a1a; color: #fff; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; box-sizing: border-box; }
+  .container { width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 20px; }
+  h2 { text-align: center; margin-top: 0; }
+
+  /* 2. 將三大區塊包裝起來，方便控制排列方向 */
+  .diagram-flow { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
+
   /* 區域基礎樣式 */
-  .area { border: 2px solid #444; border-radius: 12px; padding: 15px; position: relative; transition: all 0.3s; background: #252525; }
-  .area h3 { margin: 0 0 10px 0; font-size: 16px; color: #aaa; text-align: center; }
-  
+  .area { border: 2px solid #444; border-radius: 12px; padding: 20px 15px; position: relative; transition: all 0.3s; background: #252525; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .area h3 { margin: 0 0 15px 0; font-size: 16px; color: #aaa; text-align: center; line-height: 1.4; }
+
   /* 檔案圖示樣式 */
   .file-node { 
-    background: #4a4a4a; padding: 8px 12px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
-    font-size: 13px; margin: 5px auto; width: fit-content; border: 1px solid #666; transition: all 0.5s;
+    background: #4a4a4a; padding: 12px 15px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    font-size: 14px; width: fit-content; border: 1px solid #666; transition: all 0.5s; text-align: center;
   }
   .file-node.changed { background: #d9822b; border-color: #ff9800; animation: pulse 1s infinite; }
   .file-node.ignored { opacity: 0.5; border-style: dashed; }
   .file-node.deleted { transform: scale(0); opacity: 0; }
 
-  /* 垂直箭頭 */
-  .arrow { text-align: center; font-size: 24px; color: #666; margin: -5px 0; }
+  /* 3. 動態箭頭設定 (預設為向下) */
+  .arrow { text-align: center; font-size: 24px; color: #888; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+  .arrow::after { content: '↓'; }
 
-  /* 按鈕樣式 */
-  .controls { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 20px; width: 100%; }
-  button { padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; background: #3d3d3d; color: #fff; }
+  /* 按鈕樣式 (預設為單行排列) */
+  .controls { display: grid; grid-template-columns: 1fr; gap: 12px; width: 100%; margin-top: 10px; }
+  button { padding: 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; background: #3d3d3d; color: #fff; font-size: 15px; transition: background 0.2s, transform 0.1s; }
   button:hover { background: #4d4d4d; }
+  button:active { transform: scale(0.98); }
   .btn-primary { background: #2188ff; }
+  .btn-primary:hover { background: #0366d6; }
   .btn-danger { background: #d73a49; }
-  
-  #status-log { margin-top: 20px; padding: 12px; background: #000; border-radius: 6px; font-size: 14px; color: #0f0; width: 100%; box-sizing: border-box; }
+  .btn-danger:hover { background: #cb2431; }
 
-  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(217, 130, 43, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(217, 130, 43, 0); } 100% { box-shadow: 0 0 0 0 rgba(217, 130, 43, 0); } }
+  #status-log { padding: 15px; background: #000; border-radius: 8px; font-size: 15px; color: #0f0; width: 100%; box-sizing: border-box; line-height: 1.5; border-left: 4px solid #0f0; }
+
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(217, 130, 43, 0.4); } 70% { box-shadow: 0 0 0 12px rgba(217, 130, 43, 0); } 100% { box-shadow: 0 0 0 0 rgba(217, 130, 43, 0); } }
+
+  /* =========================================
+     自適應版面 (平板與電腦版 >= 768px) 
+  ========================================= */
+  @media (min-width: 768px) {
+    /* 區塊改成橫向並排 */
+    .diagram-flow { flex-direction: row; align-items: stretch; justify-content: space-between; gap: 15px; }
+    .area { flex: 1; }
+    
+    /* 箭頭改成向右 */
+    .arrow::after { content: '→'; }
+    
+    /* 按鈕變成兩欄 */
+    .controls { grid-template-columns: repeat(2, 1fr); }
+  }
+  
+  /* 電腦大螢幕 (>= 1024px) */
+  @media (min-width: 1024px) {
+    /* 按鈕變成四欄排開 */
+    .controls { grid-template-columns: repeat(4, 1fr); }
+  }
 </style>
 </head>
 <body>
@@ -39,30 +70,32 @@
 <div class="container">
   <h2>Git 狀態機模擬器</h2>
 
-  <div class="area" id="area-disk">
-    <h3>1. 物理硬碟 (Physical Disk)</h3>
-    <div id="file-disk" class="file-node">📄 dify_hook_log.txt</div>
-  </div>
+  <div class="diagram-flow">
+    <div class="area" id="area-disk">
+      <h3>1. 物理硬碟<br><small>(Physical Disk)</small></h3>
+      <div id="file-disk" class="file-node">📄 dify_hook_log.txt</div>
+    </div>
 
-  <div class="arrow">↓</div>
+    <div class="arrow"></div>
 
-  <div class="area" id="area-staging">
-    <h3>2. Git 監控區 (Staging/Index)</h3>
-    <div id="file-staging" class="file-node">📄 dify_hook_log.txt</div>
-  </div>
+    <div class="area" id="area-staging">
+      <h3>2. Git 監控區<br><small>(Staging/Index)</small></h3>
+      <div id="file-staging" class="file-node">📄 dify_hook_log.txt</div>
+    </div>
 
-  <div class="arrow">↓</div>
+    <div class="arrow"></div>
 
-  <div class="area" id="area-remote">
-    <h3>3. 雲端倉庫 (Remote Repo)</h3>
-    <div id="file-remote" class="file-node">📄 dify_hook_log.txt</div>
+    <div class="area" id="area-remote">
+      <h3>3. 雲端倉庫<br><small>(Remote Repo)</small></h3>
+      <div id="file-remote" class="file-node">📄 dify_hook_log.txt</div>
+    </div>
   </div>
 
   <div class="controls">
     <button class="btn-primary" onclick="writeLog()">A: Dify 腳本寫入日誌</button>
     <button class="btn-danger" onclick="rmCached()">B: 執行 git rm --cached</button>
     <button onclick="addIgnore()">C: 加入 .gitignore</button>
-    <button onclick="resetSim()" style="margin-top:10px; opacity:0.6;">🔄 重置模擬器</button>
+    <button onclick="resetSim()">🔄 重置模擬器</button>
   </div>
 
   <div id="status-log">系統就緒。檔案目前被 Git 完整追蹤中。</div>
@@ -77,7 +110,6 @@
     const diskNode = document.getElementById('file-disk');
     const stageNode = document.getElementById('file-staging');
     
-    // 物理硬碟檔案永遠會變化
     diskNode.classList.add('changed');
     setTimeout(() => diskNode.classList.remove('changed'), 1000);
 
