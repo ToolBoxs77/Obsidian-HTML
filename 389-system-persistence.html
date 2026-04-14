@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>系統持久性與防禦邏輯模擬器</title>
+<title>系統持久性與防禦邏輯模擬器 (自適應版)</title>
 <style>
   :root {
     --bg-dark: #0b0f19;
@@ -17,11 +17,30 @@
     --color-override: #f59e0b; /* 橘金：全量噴墨 */
   }
 
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-dark); color: var(--text-main); margin: 0; padding: 20px; display: flex; justify-content: center; }
-  .container { width: 100%; max-width: 850px; background: var(--panel-bg); border-radius: 12px; border: 1px solid var(--border-dim); display: flex; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.6); }
+  /* 全局防破版保護 */
+  * { box-sizing: border-box; }
 
-  /* 左側側邊欄：規則面板 */
-  .sidebar { width: 280px; background: #0f1423; border-right: 1px solid var(--border-dim); padding: 25px; display: flex; flex-direction: column; gap: 15px; }
+  body { 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+    background: var(--bg-dark); color: var(--text-main); 
+    margin: 0; padding: 15px; 
+    display: flex; justify-content: center; min-height: 100vh;
+  }
+  
+  /* 容器：手機版預設為垂直堆疊 */
+  .container { 
+    width: 100%; max-width: 850px; background: var(--panel-bg); 
+    border-radius: 12px; border: 1px solid var(--border-dim); 
+    display: flex; flex-direction: column; overflow: hidden; 
+    box-shadow: 0 20px 40px rgba(0,0,0,0.6); height: fit-content;
+  }
+
+  /* 左側側邊欄 (手機版會在上方) */
+  .sidebar { 
+    width: 100%; background: #0f1423; 
+    border-bottom: 1px solid var(--border-dim); 
+    padding: 20px; display: flex; flex-direction: column; gap: 15px; 
+  }
   .sidebar h3 { margin: 0; color: #38bdf8; font-size: 16px; border-bottom: 1px solid var(--border-dim); padding-bottom: 10px; }
   
   .rule-card { background: #1e293b; padding: 15px; border-radius: 8px; border-left: 4px solid var(--border-dim); font-size: 13px; line-height: 1.6; color: #cbd5e1; transition: 0.3s; }
@@ -30,34 +49,56 @@
   .rule-title { font-weight: bold; color: #fff; display: block; margin-bottom: 5px; }
 
   /* 右側主要畫布 */
-  .main-area { flex: 1; padding: 25px; display: flex; flex-direction: column; }
+  .main-area { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
   
-  .controls { display: flex; gap: 10px; margin-bottom: 20px; }
-  select { padding: 10px; border-radius: 6px; background: #1e293b; color: white; border: 1px solid var(--border-dim); font-size: 14px; flex: 2; cursor: pointer; }
-  button { padding: 10px 15px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 14px; }
-  .btn-run { background: #10b981; color: white; flex: 1; }
+  /* 控制列：流體排版 */
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; }
+  select { padding: 12px; border-radius: 6px; background: #1e293b; color: white; border: 1px solid var(--border-dim); font-size: 14px; flex: 1 1 100%; cursor: pointer; }
+  button { padding: 12px 15px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 14px; }
+  .btn-run { background: #10b981; color: white; flex: 2 1 150px; }
   .btn-run:hover { background: #059669; }
-  .btn-reset { background: transparent; border: 1px dashed var(--text-muted); color: var(--text-muted); flex: 0.5; }
+  .btn-reset { background: transparent; border: 1px dashed var(--text-muted); color: var(--text-muted); flex: 1 1 80px; }
   .btn-reset:hover { border-style: solid; background: #ef4444; color: white; }
   button:disabled { opacity: 0.5; cursor: not-allowed; }
 
   /* 輸出視覺化區塊 */
-  .canvas { background: #0b0f19; border: 1px solid var(--border-dim); border-radius: 8px; padding: 20px; min-height: 250px; display: flex; flex-direction: column; gap: 10px; position: relative; }
+  .canvas { background: #0b0f19; border: 1px solid var(--border-dim); border-radius: 8px; padding: 15px; min-height: 250px; display: flex; flex-direction: column; gap: 10px; position: relative; }
   
-  .data-block { padding: 15px; background: #1e293b; border: 1px solid #334155; border-radius: 6px; font-family: monospace; font-size: 13px; color: var(--text-muted); transition: all 0.4s ease; display: flex; justify-content: space-between; }
+  /* 加入 flex-wrap 防禦超長文字擠破版面 */
+  .data-block { 
+    padding: 12px 15px; background: #1e293b; border: 1px solid #334155; border-radius: 6px; 
+    font-family: monospace; font-size: 13px; color: var(--text-muted); transition: all 0.4s ease; 
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+  }
   
   /* 動畫狀態類別 */
   .block-cached { background: #0f1423; border-color: var(--border-dim); color: #475569; opacity: 0.6; }
-  .block-delta { background: rgba(59, 130, 246, 0.15); border-color: var(--color-delta); color: #93c5fd; transform: scale(1.02); box-shadow: 0 0 15px rgba(59, 130, 246, 0.3); }
-  .block-override { background: rgba(245, 158, 11, 0.15); border-color: var(--color-override); color: #fcd34d; transform: scale(1.02); box-shadow: 0 0 15px rgba(245, 158, 11, 0.4); }
+  .block-delta { background: rgba(59, 130, 246, 0.15); border-color: var(--color-delta); color: #93c5fd; transform: scale(1.02); box-shadow: 0 0 15px rgba(59, 130, 246, 0.3); z-index: 2; }
+  .block-override { background: rgba(245, 158, 11, 0.15); border-color: var(--color-override); color: #fcd34d; transform: scale(1.02); box-shadow: 0 0 15px rgba(245, 158, 11, 0.4); z-index: 2; }
 
   /* 終端機模擬器 (金鑰輸入) */
-  .terminal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); border-radius: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #10b981; font-family: monospace; font-size: 16px; z-index: 10; opacity: 0; pointer-events: none; transition: 0.3s; }
+  .terminal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); border-radius: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #10b981; font-family: monospace; font-size: 14px; z-index: 10; opacity: 0; pointer-events: none; transition: 0.3s; padding: 20px; text-align: center; }
   .terminal-overlay.show { opacity: 1; }
 
   /* 底部狀態列 */
-  .status-bar { margin-top: auto; padding: 15px; background: #1e293b; border-radius: 8px; font-size: 13px; line-height: 1.5; color: #e2e8f0; min-height: 45px; border-left: 4px solid var(--border-dim); transition: 0.3s; }
+  .status-bar { margin-top: auto; padding: 15px; background: #1e293b; border-radius: 8px; font-size: 13px; line-height: 1.6; color: #e2e8f0; min-height: 45px; border-left: 4px solid var(--border-dim); transition: 0.3s; }
 
+  /* =========================================
+     電腦與平板自適應 (>= 768px 時恢復左右排列) 
+  ========================================= */
+  @media (min-width: 768px) {
+    .container { flex-direction: row; }
+    .sidebar { width: 280px; border-bottom: none; border-right: 1px solid var(--border-dim); padding: 25px; }
+    .main-area { padding: 25px; gap: 20px; }
+    
+    .controls { flex-wrap: nowrap; }
+    select { flex: 2 1 auto; }
+    .btn-run { flex: 1 1 auto; }
+    .btn-reset { flex: 0.5 1 auto; }
+    
+    .canvas { padding: 20px; }
+    .terminal-overlay { font-size: 16px; }
+  }
 </style>
 </head>
 <body>
@@ -121,16 +162,13 @@
     document.getElementById('block-5')
   ];
 
-  // 輔助：延遲函數
   const delay = ms => new Promise(res => setTimeout(res, ms));
 
-  // 重置系統 (切換模式時自動觸發)
   function resetSim() {
     btnRun.disabled = false;
     terminal.classList.remove('show');
     termText.innerText = "> _";
     
-    // 清除視覺狀態
     ruleA.className = 'rule-card';
     ruleB.className = 'rule-card';
     statusBar.style.borderLeftColor = 'var(--border-dim)';
@@ -144,7 +182,6 @@
       ruleB.classList.add('active-override');
     }
 
-    // 重置所有區塊
     blocks.forEach(b => {
       b.className = 'data-block';
       b.querySelector('.tag').innerText = b.id === 'block-3' ? '微小修改' : '未變動';
@@ -152,19 +189,16 @@
     });
   }
 
-  // 執行主邏輯
   async function runSim() {
     btnRun.disabled = true;
     const mode = modeSelect.value;
 
     if (mode === 'A') {
-      // 模式 A：差異補丁
       statusBar.style.borderLeftColor = 'var(--color-delta)';
       statusBar.innerHTML = "掃描文件變動中...";
       
       await delay(600);
       
-      // 1, 2, 4, 5 進入快取休眠
       [0, 1, 3, 4].forEach(i => {
         blocks[i].classList.add('block-cached');
         blocks[i].querySelector('.tag').innerText = '休眠 (命中快取)';
@@ -173,18 +207,15 @@
       statusBar.innerHTML = "偵測到 Block 03 變動，執行局部渲染...";
       await delay(600);
       
-      // 只有 3 重新輸出
       blocks[2].classList.add('block-delta');
       blocks[2].querySelector('.tag').innerText = '重新輸出 (Delta)';
       
       statusBar.innerHTML = "<b>【執行完畢】</b>僅輸出受影響區塊。有效保護 Token 資源，但可能導致上下文連貫性遺失。";
 
     } else {
-      // 模式 B：全量輸出特許豁免
       statusBar.style.borderLeftColor = 'var(--color-override)';
       statusBar.innerHTML = "偵測到全量輸出請求...";
       
-      // 終端機模擬輸入金鑰
       terminal.classList.add('show');
       await delay(400);
       
@@ -195,13 +226,12 @@
         await delay(50);
       }
       
-      termText.innerHTML += "<br><span style='color:#f59e0b;'>[SYSTEM] 解除快取鎖定，全量噴墨啟動...</span>";
+      termText.innerHTML += "<br><br><span style='color:#f59e0b;'>[SYSTEM] 解除快取鎖定，全量噴墨啟動...</span>";
       await delay(800);
       terminal.classList.remove('show');
       
       statusBar.innerHTML = "金鑰驗證通過！系統強制燃燒算力，執行全量渲染...";
       
-      // 所有區塊依序全量輸出
       for(let i=0; i<blocks.length; i++) {
         blocks[i].classList.add('block-override');
         blocks[i].querySelector('.tag').innerText = '強制全量輸出';
@@ -213,7 +243,7 @@
     }
   }
 
-  // 初次載入初始化
+  // 初始載入
   resetSim();
 </script>
 </body>
