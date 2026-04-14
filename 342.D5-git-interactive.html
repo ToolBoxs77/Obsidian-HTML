@@ -9,25 +9,24 @@
     background: #222; color: white; text-align: center; font-family: sans-serif; 
     margin: 0; padding: 20px; box-sizing: border-box; 
   }
-  .container { max-width: 600px; margin: 0 auto; } /* 限制最大寬度，在電腦上才不會太鬆散 */
+  .container { max-width: 600px; margin: 0 auto; }
 
-  /* 關鍵 2：狀態框使用 Flexbox 自動伸縮 */
+  /* 狀態框使用 Flexbox 自動伸縮 */
   .boxes { 
     display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 20px; 
   }
   .box { 
     border: 1px solid #555; padding: 15px 10px; border-radius: 6px; background: #333; 
-    flex: 1 1 80px; /* 允許自動伸展與縮小 */
-    min-width: 80px; 
+    flex: 1 1 80px; min-width: 80px; 
   }
 
-  /* 關鍵 3：按鈕使用 CSS Grid 自動排版 (手機會自動變多排，電腦會變一排) */
+  /* 按鈕使用 CSS Grid 自動排版 */
   .buttons { 
     display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-bottom: 20px; 
   }
   button { 
     padding: 12px; cursor: pointer; background: #444; color: white; border: 1px solid #666; 
-    border-radius: 6px; font-size: 14px; transition: 0.2s; 
+    border-radius: 6px; font-size: 14px; transition: 0.2s; font-weight: bold;
   }
   button:hover { background: #555; }
 
@@ -38,7 +37,7 @@
 <body>
   
   <div class="container">
-    <h3>Git 邏輯測試版</h3>
+    <h3>Git 邏輯測試版 (防呆修復版)</h3>
     
     <div class="boxes">
       <div class="box">工作區: <br><b id="ws" style="font-size: 20px;">0</b></div>
@@ -60,4 +59,39 @@
   </div>
 
   <script>
-    let ws=0, loc=1, rem=
+    let ws=0, loc=1, rem=1;
+    
+    function update() {
+      document.getElementById('ws').innerText = ws;
+      document.getElementById('loc').innerText = 'v' + loc;
+      document.getElementById('rem').innerText = 'v' + rem;
+    }
+
+    // 修復：將原本的 msg 函數改名為 showMsg，避免與 HTML 的 id="msg" 產生全域衝突
+    function showMsg(t) { 
+      document.getElementById('msg').innerText = t; 
+    }
+
+    function edit() { ws++; update(); showMsg("您修改了檔案"); }
+    
+    function commit() { 
+      if(ws>0) { loc++; ws=0; update(); showMsg("Commit 成功"); } 
+      else { showMsg("沒東西可存"); } 
+    }
+    
+    function push() { 
+      if(loc>rem && ws===0) { rem=loc; update(); showMsg("Push 成功"); } 
+      else { showMsg("無法 Push (請先確認已 Commit 且地端版本較新)"); } 
+    }
+    
+    function sim() { 
+      rem++; update(); showMsg("警告：雲端有新版 v" + rem); 
+    }
+    
+    function pull() { 
+      if(rem>loc) { loc=rem; ws=0; update(); showMsg("Pull 成功"); } 
+      else { showMsg("已是最新版"); } 
+    }
+  </script>
+</body>
+</html>
