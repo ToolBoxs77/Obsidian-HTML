@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>全域聖典 4.0 體用合一映射矩陣 (自適應版)</title>
+<title>全域聖典 4.0 體用合一映射矩陣 (真自適應版)</title>
 <style>
   :root {
     --bg-base: #0b0f19;
@@ -18,7 +18,6 @@
     --color-git: #10b981; /* 終端綠 */
   }
 
-  /* 全局防破版 */
   * { box-sizing: border-box; }
 
   body {
@@ -39,7 +38,7 @@
     background: var(--bg-panel);
     border-radius: 12px;
     border: 1px solid var(--border-dim);
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -55,15 +54,12 @@
     gap: 15px;
   }
 
-  .header-title { margin: 0; font-size: 18px; color: #38bdf8; font-weight: bold; letter-spacing: 1px; text-align: center; }
+  .header-title { margin: 0; font-size: 16px; color: #38bdf8; font-weight: bold; text-align: center; }
 
-  /* 按鈕群流體佈局 */
-  .btn-group { 
-    display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
-  }
+  .btn-group { display: flex; flex-direction: column; gap: 10px; }
   
   button {
-    padding: 12px 16px;
+    padding: 14px;
     border-radius: 8px;
     font-size: 14px;
     font-weight: bold;
@@ -71,14 +67,12 @@
     border: 1px solid var(--border-dim);
     background: #1e293b;
     color: var(--text-bright);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    flex: 1 1 auto; /* 允許自動伸縮 */
-    min-width: 160px; /* 控制最小寬度確保好按 */
+    transition: all 0.3s;
+    width: 100%;
   }
 
-  button:hover { background: #334155; transform: translateY(-1px); }
-  
-  .btn-reset { flex: 0.5; min-width: 120px; background: transparent; border-style: dashed; color: var(--text-dim); }
+  button:hover { background: #334155; }
+  .btn-reset { background: transparent; border-style: dashed; color: var(--text-dim); }
   .btn-reset:hover { background: #ef4444; color: white; border-style: solid; border-color: #ef4444; }
 
   /* 按鈕啟動狀態 */
@@ -86,76 +80,79 @@
   .btn-cot.active { background: rgba(139, 92, 246, 0.1); border-color: var(--color-cot); color: #c4b5fd; box-shadow: 0 0 10px rgba(139, 92, 246, 0.2); }
   .btn-git.active { background: rgba(16, 185, 129, 0.1); border-color: var(--color-git); color: var(--color-git); box-shadow: 0 0 10px rgba(16, 185, 129, 0.2); }
 
-  /* 中央：矩陣視圖 (防呆橫向捲動區) */
-  .matrix-wrapper {
-    width: 100%;
-    overflow-x: auto; /* 窄螢幕時自動開啟橫向捲動 */
-    padding: 20px;
-    /* 美化捲軸 */
-    scrollbar-width: thin;
-    scrollbar-color: #475569 #0f1423;
-  }
-  .matrix-wrapper::-webkit-scrollbar { height: 8px; }
-  .matrix-wrapper::-webkit-scrollbar-track { background: #0f1423; border-radius: 4px; }
-  .matrix-wrapper::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+  /* 中央：矩陣視圖 (預設為手機卡片版) */
+  .matrix-area { padding: 20px; }
+  
+  /* 隱藏桌機版的頂部 X 軸 */
+  .matrix-header-row { display: none; }
 
-  /* 窄螢幕專屬滑動提示 */
-  .scroll-hint {
-    display: none;
-    text-align: center;
-    color: var(--color-fto);
-    font-size: 13px;
-    font-weight: bold;
-    margin-bottom: 10px;
-    animation: pulseHint 2s infinite;
-  }
-  @keyframes pulseHint { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
-
-  .grid-container {
-    display: grid;
-    /* 強制矩陣最小寬度 800px，低於此寬度時母層會產生捲軸 */
-    min-width: 800px; 
-    grid-template-columns: 140px repeat(6, 1fr);
-    gap: 10px;
-  }
-
-  /* 標頭樣式 */
-  .grid-header {
+  /* Y 軸列：手機版變為卡片外框 */
+  .matrix-row {
+    background: #111827;
+    border: 1px solid var(--border-dim);
+    border-radius: 10px;
+    margin-bottom: 15px;
+    overflow: hidden;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-    font-weight: bold;
-    color: var(--text-dim);
-    text-align: center;
-    padding: 10px 5px;
+    flex-direction: column;
   }
-  .header-y { justify-content: flex-end; padding-right: 15px; text-align: right; border-right: 1px solid var(--border-dim); }
-  .header-x { border-bottom: 1px solid var(--border-dim); }
+
+  /* Y 軸標題：手機版變為卡片標題 */
+  .header-y {
+    background: #1e293b;
+    padding: 12px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #cbd5e1;
+    text-align: center;
+    border-bottom: 1px solid var(--border-dim);
+  }
+
+  /* 資料格容器：手機版為雙欄網格 */
+  .cells-wrapper {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    padding: 12px;
+  }
 
   /* 矩陣交叉點 (Cell) */
   .cell {
     background: #0b0f19;
     border: 1px solid #1e293b;
-    border-radius: 6px;
-    height: 60px;
+    border-radius: 8px;
+    padding: 12px 5px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     font-size: 12px;
     color: #334155;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.4s;
     position: relative;
-    overflow: hidden;
   }
   
+  /* 手機版專屬 X 軸標籤 (內嵌於 Cell 中) */
+  .mobile-x-label { font-size: 11px; color: var(--text-dim); margin-bottom: 5px; text-align: center; }
   .cell-status { font-size: 11px; margin-top: 4px; opacity: 0.7; }
+  .cell-content { display: flex; flex-direction: column; align-items: center; }
 
   /* 啟動發光特效 (Glow) */
-  .cell.glow-fto { background: rgba(245, 158, 11, 0.15); border-color: var(--color-fto); color: var(--color-fto); box-shadow: 0 0 20px rgba(245, 158, 11, 0.3) inset, 0 0 15px rgba(245, 158, 11, 0.4); transform: scale(1.05); z-index: 10; font-weight: bold; }
-  .cell.glow-cot { background: rgba(139, 92, 246, 0.15); border-color: var(--color-cot); color: #c4b5fd; box-shadow: 0 0 20px rgba(139, 92, 246, 0.3) inset, 0 0 15px rgba(139, 92, 246, 0.4); transform: scale(1.05); z-index: 10; font-weight: bold; }
-  .cell.glow-git { background: rgba(16, 185, 129, 0.15); border-color: var(--color-git); color: var(--color-git); box-shadow: 0 0 20px rgba(16, 185, 129, 0.3) inset, 0 0 15px rgba(16, 185, 129, 0.4); transform: scale(1.05); z-index: 10; font-weight: bold; }
+  .cell.glow-fto {
+    background: rgba(245, 158, 11, 0.15); border-color: var(--color-fto); color: var(--color-fto);
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.3) inset, 0 0 10px rgba(245, 158, 11, 0.4);
+    transform: translateY(-2px); font-weight: bold; z-index: 2;
+  }
+  .cell.glow-cot {
+    background: rgba(139, 92, 246, 0.15); border-color: var(--color-cot); color: #c4b5fd;
+    box-shadow: 0 0 15px rgba(139, 92, 246, 0.3) inset, 0 0 10px rgba(139, 92, 246, 0.4);
+    transform: translateY(-2px); font-weight: bold; z-index: 2;
+  }
+  .cell.glow-git {
+    background: rgba(16, 185, 129, 0.15); border-color: var(--color-git); color: var(--color-git);
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.3) inset, 0 0 10px rgba(16, 185, 129, 0.4);
+    transform: translateY(-2px); font-weight: bold; z-index: 2;
+  }
 
   /* 底部：動態解說區 */
   .explanation-area {
@@ -163,23 +160,70 @@
     background: #0b0f19;
     border-top: 1px solid var(--border-dim);
     border-left: 4px solid var(--border-dim);
-    min-height: 80px;
     transition: border-color 0.3s;
   }
 
   .explanation-title { margin: 0 0 10px 0; font-size: 14px; color: var(--text-bright); display: flex; align-items: center; gap: 8px; }
-  .explanation-text { margin: 0; font-size: 14px; line-height: 1.6; color: #cbd5e1; }
+  .explanation-text { margin: 0; font-size: 13px; line-height: 1.6; color: #cbd5e1; }
 
   /* =========================================
-     手機版專用自適應微調 
+     電腦與平板自適應 (>= 768px 時變回 3x6 矩陣) 
   ========================================= */
-  @media (max-width: 850px) {
-    .header-title { text-align: left; }
-    .scroll-hint { display: block; /* 窄螢幕時顯示滑動提示 */ }
-    button { flex: 1 1 45%; /* 按鈕變為兩兩並排 */ }
-    .btn-reset { flex: 1 1 100%; /* 重置按鈕獨立一行 */ }
-  }
+  @media (min-width: 768px) {
+    .header-title { font-size: 18px; text-align: left; }
+    .btn-group { flex-direction: row; }
+    button { flex: 1; }
+    .btn-reset { flex: 0.5; }
+    
+    .matrix-area { padding: 30px 25px; }
 
+    /* 顯示桌機版 X 軸 */
+    .matrix-header-row {
+      display: grid;
+      grid-template-columns: 140px repeat(6, 1fr);
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .header-corner { display: block; }
+    .header-x {
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: bold; color: var(--text-dim);
+      border-bottom: 1px solid var(--border-dim); padding-bottom: 10px;
+    }
+
+    /* Y 軸列：取消卡片外觀，變成網格列 */
+    .matrix-row {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      background: transparent;
+      border: none;
+      margin-bottom: 15px;
+    }
+
+    /* Y 軸標題：靠右對齊 */
+    .header-y {
+      background: transparent;
+      text-align: right;
+      padding-right: 15px;
+      border-bottom: none;
+      border-right: 1px solid var(--border-dim);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    /* 資料格容器：變成 6 欄平排 */
+    .cells-wrapper {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+      padding: 0 0 0 10px;
+    }
+
+    /* 隱藏內嵌的 X 軸標籤 */
+    .mobile-x-label { display: none; }
+    .cell { padding: 10px; }
+  }
 </style>
 </head>
 <body>
@@ -190,16 +234,13 @@
     <div class="btn-group">
       <button id="btn-fto" class="btn-fto" onclick="activateTask('fto')">CAO 專利侵權判定 (FTO)</button>
       <button id="btn-cot" class="btn-cot" onclick="activateTask('cot')">機電研發算力推演 (CoT)</button>
-      <button id="btn-git" class="btn-git" onclick="activateTask('git')">全域資料無縫同步 (Git Sync)</button>
+      <button id="btn-git" class="btn-git" onclick="activateTask('git')">全域資料無縫同步</button>
       <button class="btn-reset" onclick="resetMatrix()">🔄 重置矩陣</button>
     </div>
   </div>
 
-  <div class="matrix-wrapper">
-    <div class="scroll-hint">👉 左右滑動以查看完整矩陣</div>
-    <div class="grid-container" id="grid">
-      </div>
-  </div>
+  <div class="matrix-area" id="grid">
+    </div>
 
   <div class="explanation-area" id="exp-box">
     <h3 class="explanation-title">📍 動態物理執行路徑解說</h3>
@@ -208,7 +249,7 @@
 </div>
 
 <script>
-  // 定義體用座標軸
+  // 體用座標軸定義
   const bodyY = [
     { id: 'A', name: 'A (S24 行動端)' },
     { id: 'B', name: 'B (128GB 母艦)' },
@@ -226,17 +267,23 @@
   // 任務資料字典
   const taskMap = {
     fto: {
-      colorClass: 'glow-fto', btnId: 'btn-fto', borderColor: 'var(--color-fto)',
+      colorClass: 'glow-fto',
+      btnId: 'btn-fto',
+      borderColor: 'var(--color-fto)',
       cells: ['B-B', 'B-C', 'B-0'],
       desc: '母艦啟動重型 RAG。透過公路 B 爬取專利，交由公路 C 進行 FTO 邏輯拆解，並由公路 0 執行資安防禦。'
     },
     cot: {
-      colorClass: 'glow-cot', btnId: 'btn-cot', borderColor: 'var(--color-cot)',
+      colorClass: 'glow-cot',
+      btnId: 'btn-cot',
+      borderColor: 'var(--color-cot)',
       cells: ['C-A', 'C-C', 'C-Omega'],
       desc: '雲端啟動無限算力。由公路 A 接收參數，於公路 C 展開深度 CoT 思維鏈推演，並透過公路 Ω 逆向解析對手規格。'
     },
     git: {
-      colorClass: 'glow-git', btnId: 'btn-git', borderColor: 'var(--color-git)',
+      colorClass: 'glow-git',
+      btnId: 'btn-git',
+      borderColor: 'var(--color-git)',
       cells: ['A-A', 'B-D'],
       desc: 'S24 行動端透過公路 A 捕獲即時靈感，直接穿透隧道，交由母艦的公路 D 執行 Git 同步寫入實體硬碟。'
     }
@@ -244,36 +291,65 @@
 
   const grid = document.getElementById('grid');
 
+  // 動態構建高適應性 DOM 結構
   function renderGrid() {
-    grid.innerHTML = ''; 
-    grid.appendChild(createDiv('grid-header', '')); // 左上空白
+    grid.innerHTML = '';
 
-    useX.forEach(x => { grid.appendChild(createDiv('grid-header header-x', x.name)); });
+    // 1. 構建桌機版頂部 X 軸 (手機版會用 CSS 隱藏)
+    const headerRow = document.createElement('div');
+    headerRow.className = 'matrix-header-row';
+    headerRow.innerHTML = `<div class="header-corner"></div>`;
+    useX.forEach(x => {
+      const xLabel = document.createElement('div');
+      xLabel.className = 'header-x';
+      xLabel.innerText = x.name;
+      headerRow.appendChild(xLabel);
+    });
+    grid.appendChild(headerRow);
 
+    // 2. 構建 Y 軸資料列 (手機版會變成獨立卡片)
     bodyY.forEach(y => {
-      grid.appendChild(createDiv('grid-header header-y', y.name));
+      const row = document.createElement('div');
+      row.className = 'matrix-row';
+      
+      // Y 軸標題
+      const yLabel = document.createElement('div');
+      yLabel.className = 'header-y';
+      yLabel.innerText = y.name;
+      row.appendChild(yLabel);
+
+      // 該列的資料格容器
+      const cellsWrapper = document.createElement('div');
+      cellsWrapper.className = 'cells-wrapper';
+
       useX.forEach(x => {
         const cell = document.createElement('div');
         cell.className = 'cell';
-        cell.id = `cell-${y.id}-${x.id}`; 
-        cell.innerHTML = `<span>休眠</span><span class="cell-status">Dormant</span>`;
-        grid.appendChild(cell);
+        cell.id = `cell-${y.id}-${x.id}`;
+        
+        // 內嵌手機版專用的 X 軸標籤
+        cell.innerHTML = `
+          <div class="mobile-x-label">${x.name}</div>
+          <div class="cell-content">
+            <span>休眠</span>
+            <span class="cell-status">Dormant</span>
+          </div>
+        `;
+        cellsWrapper.appendChild(cell);
       });
+
+      row.appendChild(cellsWrapper);
+      grid.appendChild(row);
     });
   }
 
-  function createDiv(className, text) {
-    const el = document.createElement('div');
-    el.className = className;
-    el.innerText = text;
-    return el;
-  }
-
+  // 系統重置
   function resetMatrix(isFullReset = true) {
     document.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+    
     document.querySelectorAll('.cell').forEach(cell => {
       cell.className = 'cell'; 
-      cell.innerHTML = `<span>休眠</span><span class="cell-status">Dormant</span>`;
+      cell.querySelector('.cell-content').innerHTML = `<span>休眠</span><span class="cell-status">Dormant</span>`;
     });
 
     if (isFullReset) {
@@ -282,6 +358,7 @@
     }
   }
 
+  // 啟動任務
   function activateTask(taskKey) {
     resetMatrix(false); 
     const data = taskMap[taskKey];
@@ -292,7 +369,7 @@
       const cell = document.getElementById(`cell-${coord}`);
       if (cell) {
         cell.classList.add(data.colorClass);
-        cell.innerHTML = `<span>活躍</span><span class="cell-status">Active</span>`;
+        cell.querySelector('.cell-content').innerHTML = `<span>活躍</span><span class="cell-status">Active</span>`;
       }
     });
 
@@ -300,7 +377,9 @@
     document.getElementById('exp-box').style.borderLeftColor = data.borderColor;
   }
 
-  window.onload = renderGrid;
+  // 載入執行
+  renderGrid();
+
 </script>
 </body>
 </html>
