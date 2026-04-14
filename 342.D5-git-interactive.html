@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Git 雙地協作同步邏輯測試 (真實邏輯版)</title>
+<title>Git 雙地協作同步邏輯測試 (平行宇宙透析版)</title>
 <style>
   /* 基礎設定 */
   body { 
@@ -22,6 +22,7 @@
   .cloud-node {
     background: #89b4fa; color: #11111b; padding: 15px 30px; border-radius: 8px; font-weight: bold;
     width: fit-content; margin: 0 auto; border: 2px solid #b4befe;
+    box-shadow: 0 0 15px rgba(137, 180, 250, 0.3);
   }
 
   .local-nodes {
@@ -29,14 +30,17 @@
   }
   
   .pc-node {
-    background: #45475a; padding: 15px; border-radius: 8px; flex: 1; min-width: 200px;
+    background: #45475a; padding: 15px; border-radius: 8px; flex: 1; min-width: 220px;
     border: 2px solid #585b70; display: flex; flex-direction: column; gap: 5px; text-align: left;
   }
   .pc-node h3 { margin: 0 0 10px 0; font-size: 16px; color: #f38ba8; text-align: center; }
   .pc-node.pc-b h3 { color: #a6e3a1; }
   
-  .status-text { font-size: 20px; font-weight: bold; color: #f9e2af; display: inline-block; margin-left: 5px; }
-  .info-row { font-size: 13px; margin: 3px 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #585b70; padding-bottom: 4px; }
+  .status-text { font-size: 22px; font-weight: bold; color: #f9e2af; display: inline-block; margin-left: 5px; }
+  .info-row { font-size: 13px; margin: 3px 0; display: flex; justify-content: space-between; align-items: center; padding-bottom: 2px; }
+  
+  /* 算式分隔線 */
+  .math-line { border-top: 2px dashed #7f849c; margin: 8px 0; }
 
   /* 操作面板 */
   .control-panel {
@@ -62,21 +66,22 @@
   .btn-reset { background: transparent; border: 1px dashed #f38ba8; color: #f38ba8; margin-top: 10px; }
   .btn-reset:hover { background: #f38ba8; color: #11111b; }
 
-  /* 訊息框 */
+  /* 訊息框 (支援多行與換行) */
   #msg-box { 
-    background: #181825; padding: 15px; border-radius: 8px; font-weight: bold; 
-    color: #f9e2af; border-left: 4px solid #f9e2af; min-height: 40px; display: flex; align-items: center;
+    background: #181825; padding: 15px; border-radius: 8px; font-weight: bold; font-size: 14px;
+    color: #f9e2af; border-left: 4px solid #f9e2af; min-height: 60px; text-align: left;
+    white-space: pre-line; line-height: 1.6;
   }
 </style>
 </head>
 <body>
 
 <div class="container">
-  <h2>Git 雙地同步邏輯模擬器 (真實邏輯版)</h2>
+  <h2>Git 雙地同步：平行宇宙透析儀</h2>
 
   <div class="architecture">
     <div class="cloud-node">
-      ☁️ 雲端倉庫 (Remote)<br>
+      ☁️ 雲端基準倉庫 (Remote Base)<br>
       目前進度: <span class="status-text" id="status-cloud">v1</span>
     </div>
 
@@ -85,16 +90,20 @@
     <div class="local-nodes">
       <div class="pc-node">
         <h3>💻 電腦 A (辦公室)</h3>
-        <div class="info-row"><span>未提交修改 (Changes):</span> <b id="ws-a" style="color:#eba0ac;">0</b></div>
-        <div class="info-row"><span>待推播存檔 (Commits):</span> <b id="commits-a" style="color:#cba6f7;">0</b></div>
-        <div class="info-row" style="border:none; margin-top:10px;"><span>本地總版本:</span> <span class="status-text" id="status-a">v1</span></div>
+        <div class="info-row"><span>基準點 (Base):</span> <b id="base-a" style="color:#89b4fa;">v1</b></div>
+        <div class="info-row"><span>+ 待推播節點 (Commits):</span> <b id="commits-a" style="color:#cba6f7;">0</b></div>
+        <div class="info-row"><span>+ 未存檔修改 (Changes):</span> <b id="ws-a" style="color:#eba0ac;">0</b></div>
+        <div class="math-line"></div>
+        <div class="info-row" style="border:none;"><span>= 本地總版本:</span> <span class="status-text" id="status-a">v1</span></div>
       </div>
       
       <div class="pc-node pc-b">
         <h3>💻 電腦 B (家裡)</h3>
-        <div class="info-row"><span>未提交修改 (Changes):</span> <b id="ws-b" style="color:#eba0ac;">0</b></div>
-        <div class="info-row"><span>待推播存檔 (Commits):</span> <b id="commits-b" style="color:#cba6f7;">0</b></div>
-        <div class="info-row" style="border:none; margin-top:10px;"><span>本地總版本:</span> <span class="status-text" id="status-b">v1</span></div>
+        <div class="info-row"><span>基準點 (Base):</span> <b id="base-b" style="color:#89b4fa;">v1</b></div>
+        <div class="info-row"><span>+ 待推播節點 (Commits):</span> <b id="commits-b" style="color:#cba6f7;">0</b></div>
+        <div class="info-row"><span>+ 未存檔修改 (Changes):</span> <b id="ws-b" style="color:#eba0ac;">0</b></div>
+        <div class="math-line"></div>
+        <div class="info-row" style="border:none;"><span>= 本地總版本:</span> <span class="status-text" id="status-b">v1</span></div>
       </div>
     </div>
   </div>
@@ -123,7 +132,7 @@
 
   <button class="btn-reset" onclick="resetSim()">🔄 全局重置 (Reset)</button>
 
-  <div id="msg-box">系統就緒。請嘗試在兩地分別修改、Commit 並感受 Pull/Push 的衝突與合併邏輯。</div>
+  <div id="msg-box">系統就緒。請觀測上方「本地總版本」的加法公式，它將為您揭開 v4 的誕生之謎。</div>
 </div>
 
 <script>
@@ -133,7 +142,7 @@
   function init() {
     state = {
       cloud_v: 1, // 雲端絕對版本號
-      A: { base: 1, changes: 0, commits: 0 }, // base=最後一次跟雲端同步的起點
+      A: { base: 1, changes: 0, commits: 0 }, 
       B: { base: 1, changes: 0, commits: 0 }
     };
   }
@@ -142,14 +151,17 @@
   function updateUI() {
     document.getElementById('status-cloud').innerText = 'v' + state.cloud_v;
     
-    // 計算本地顯示的總版本 (基底 + 自己增加的 commits)
-    document.getElementById('status-a').innerText = 'v' + (state.A.base + state.A.commits);
-    document.getElementById('ws-a').innerText = state.A.changes;
+    // 電腦 A 更新
+    document.getElementById('base-a').innerText = 'v' + state.A.base;
     document.getElementById('commits-a').innerText = state.A.commits;
+    document.getElementById('ws-a').innerText = state.A.changes;
+    document.getElementById('status-a').innerText = 'v' + (state.A.base + state.A.commits);
     
-    document.getElementById('status-b').innerText = 'v' + (state.B.base + state.B.commits);
-    document.getElementById('ws-b').innerText = state.B.changes;
+    // 電腦 B 更新
+    document.getElementById('base-b').innerText = 'v' + state.B.base;
     document.getElementById('commits-b').innerText = state.B.commits;
+    document.getElementById('ws-b').innerText = state.B.changes;
+    document.getElementById('status-b').innerText = 'v' + (state.B.base + state.B.commits);
   }
 
   function showMsg(text, color = '#f9e2af') {
@@ -172,31 +184,30 @@
     if (type === 'edit') {
       me.changes++; 
       updateUI();
-      showMsg(`【電腦 ${pc}】工作區新增了變更，請記得 Commit。`, '#eba0ac');
+      showMsg(`【電腦 ${pc}】工作區新增了變更。 (注意：未存檔的 Change 不會算進版本號中)`, '#eba0ac');
     } 
     else if (type === 'commit') {
       if (me.changes > 0) {
         me.changes = 0;
         me.commits++;
         updateUI();
-        showMsg(`【電腦 ${pc}】Commit 成功！已建立新的本地歷史節點，等待 Push。`, '#cba6f7');
+        showMsg(`【電腦 ${pc}】Commit 成功！您手動創造了 1 個歷史節點。\n數學公式：基準點(v${me.base}) + 待推播(${me.commits}) = 總版本(v${me.base + me.commits})`, '#cba6f7');
       } else {
         showMsg(`【電腦 ${pc}】工作區很乾淨，沒有東西可以 Commit。`, '#6c7086');
       }
     }
     else if (type === 'push') {
-      // 關鍵修復：檢查是否落後雲端
       if (me.base < state.cloud_v) {
-        showMsg(`❌【拒絕推送】電腦 ${pc} 與雲端產生分歧！雲端有別人上傳的進度，必須先 Pull 下載合併後才能 Push！`, '#f38ba8');
+        showMsg(`❌【拒絕推送】平行宇宙發生！\n您的基準點(v${me.base}) 落後於雲端(v${state.cloud_v})。您必須先按 Pull 把它們縫合起來！`, '#f38ba8');
       } else if (me.commits > 0) {
-        // 成功推播：雲端版本增加，本地基底對齊雲端，清空待推播
+        // 成功推播
         state.cloud_v += me.commits;
         me.base = state.cloud_v;
         me.commits = 0;
         updateUI();
-        showMsg(`✅【Push 成功】電腦 ${pc} 將本地變更推上雲端！雲端更新至 v${state.cloud_v}。`, '#89b4fa');
+        showMsg(`✅【Push 成功】本地的節點已全數推上雲端！\n雲端更新至 v${state.cloud_v}。您的待推播數量歸零。`, '#89b4fa');
       } else {
-        showMsg(`【電腦 ${pc}】沒有新的 Commit 需要 Push。`, '#6c7086');
+        showMsg(`【電腦 ${pc}】待推播數量為 0，無須 Push。`, '#6c7086');
       }
     }
     else if (type === 'pull') {
@@ -205,11 +216,11 @@
           // 產生衝突並自動合併 (Merge)
           me.base = state.cloud_v;
           me.commits++; // 產生一個額外的 Merge Commit
-          showMsg(`⚠️【自動合併 (Merge)】電腦 ${pc} 下載了雲端進度，並與本地的 Commit 進行了合併！(產生了新的 Merge Commit，請再次 Push)`, '#f9e2af');
+          showMsg(`⚠️【平行宇宙縫合 (Merge Commit)】這就是 v4 的真相！\n1. 您的基準點升級為雲端的 v${state.cloud_v}。\n2. Git 無中生有創造了 1 個「膠水節點」來縫合兩邊！\n3. 您的待推播 = 原本自己寫的(1) + 膠水節點(1) = 2。\n總版本 = 基準(v${me.base}) + 待推播(2) = v${me.base + me.commits}！`, '#f9e2af');
         } else {
           // 快速通關 (Fast-forward)
           me.base = state.cloud_v;
-          showMsg(`✅【Pull 成功】電腦 ${pc} 已同步下載雲端最新進度 (Fast-forward)。`, '#a6e3a1');
+          showMsg(`✅【Pull 成功】您本地沒有分支，直接同步雲端進度 (Fast-forward) 至 v${state.cloud_v}。`, '#a6e3a1');
         }
         updateUI();
       } else {
