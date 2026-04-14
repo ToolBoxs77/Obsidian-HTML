@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  /* 基礎設定與置中 */
+  body { 
+    background: #222; color: white; text-align: center; font-family: sans-serif; 
+    margin: 0; padding: 20px; box-sizing: border-box; 
+  }
+  .container { max-width: 600px; margin: 0 auto; } /* 限制最大寬度，在電腦上才不會太鬆散 */
+
+  /* 關鍵 2：狀態框使用 Flexbox 自動伸縮 */
+  .boxes { 
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 20px; 
+  }
+  .box { 
+    border: 1px solid #555; padding: 15px 10px; border-radius: 6px; background: #333; 
+    flex: 1 1 80px; /* 允許自動伸展與縮小 */
+    min-width: 80px; 
+  }
+
+  /* 關鍵 3：按鈕使用 CSS Grid 自動排版 (手機會自動變多排，電腦會變一排) */
+  .buttons { 
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-bottom: 20px; 
+  }
+  button { 
+    padding: 12px; cursor: pointer; background: #444; color: white; border: 1px solid #666; 
+    border-radius: 6px; font-size: 14px; transition: 0.2s; 
+  }
+  button:hover { background: #555; }
+
+  #msg { color: #f0ad4e; margin: 15px; min-height: 20px; font-weight: bold; }
+  hr { border-color: #444; margin: 20px 0; }
+</style>
+</head>
+<body>
+  
+  <div class="container">
+    <h3>Git 邏輯測試版</h3>
+    
+    <div class="boxes">
+      <div class="box">工作區: <br><b id="ws" style="font-size: 20px;">0</b></div>
+      <div class="box">地端: <br><b id="loc" style="font-size: 20px;">v1</b></div>
+      <div class="box">雲端: <br><b id="rem" style="font-size: 20px;">v1</b></div>
+    </div>
+    
+    <hr>
+    
+    <div class="buttons">
+      <button onclick="edit()">修改筆記</button>
+      <button onclick="commit()">Commit</button>
+      <button onclick="push()">Push</button>
+      <button onclick="sim()" style="background: #a65a28; border-color: #d9822b;">同事上傳</button>
+      <button onclick="pull()">Pull</button>
+    </div>
+    
+    <div id="msg">等待操作...</div>
+  </div>
+
+  <script>
+    let ws=0, loc=1, rem=
