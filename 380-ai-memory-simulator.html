@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI 物理過濾網：上下文與向量污染模擬器 (自適應版)</title>
+<title>AI 物理過濾網：上下文與向量污染模擬器 (流體防禦版)</title>
 <style>
   :root {
     --bg-dark: #0f172a;
@@ -12,73 +12,102 @@
     --text-main: #f8fafc;
     --text-muted: #94a3b8;
     
-    --color-source: #3b82f6; /* Blue */
-    --color-context: #d946ef; /* Fuchsia/Pink */
-    --color-abyss: #ef4444; /* Red */
-    --color-ghost: #8b5cf6; /* Purple */
-    --color-success: #10b981; /* Emerald */
+    --color-source: #3b82f6;
+    --color-context: #d946ef;
+    --color-abyss: #ef4444;
+    --color-ghost: #8b5cf6;
+    --color-success: #10b981;
   }
 
-  /* 加入全局 box-sizing 防破版 */
+  /* 全局強制內邊距不撐破寬度 */
   * { box-sizing: border-box; }
 
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-dark); color: var(--text-main); margin: 0; padding: 15px; display: flex; justify-content: center; min-height: 100vh; }
-  .container { width: 100%; max-width: 900px; background: var(--panel-bg); border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 15px 35px rgba(0,0,0,0.5); overflow: hidden; display: flex; flex-direction: column; }
-
-  /* 頂部控制列 */
-  .controls-header { background: #18212f; padding: 20px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 15px; }
-  .control-row { display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap; }
+  body { 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+    background: var(--bg-dark); color: var(--text-main); 
+    margin: 0; padding: 15px; 
+    display: flex; justify-content: center; min-height: 100vh; 
+  }
   
-  .input-group { display: flex; align-items: center; gap: 10px; }
-  select { padding: 10px; background: #0f172a; color: white; border: 1px solid #475569; border-radius: 6px; font-size: 14px; cursor: pointer; }
+  .container { 
+    width: 100%; max-width: 900px; background: var(--panel-bg); 
+    border-radius: 12px; border: 1px solid var(--border); 
+    box-shadow: 0 15px 35px rgba(0,0,0,0.5); overflow: hidden; 
+    display: flex; flex-direction: column; 
+  }
+
+  /* 頂部控制列：全面流體化 */
+  .controls-header { background: #18212f; padding: 20px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 20px; }
+  
+  /* 輸入區：空間不夠自動折行 */
+  .control-row { display: flex; flex-wrap: wrap; gap: 20px; width: 100%; }
+  
+  /* 群組強制上下排列，防止文字被擠斷 */
+  .input-group, .toggle-wrapper { 
+    display: flex; flex-direction: column; gap: 10px; 
+    flex: 1 1 250px; /* 最小寬度 250px，否則折行 */
+  }
+  
+  .input-group label, .toggle-wrapper label { font-size: 14px; font-weight: bold; color: var(--text-main); }
+  
+  select { 
+    padding: 12px; background: #0f172a; color: white; border: 1px solid #475569; 
+    border-radius: 6px; font-size: 14px; cursor: pointer; width: 100%; 
+  }
   
   /* 開關 Toggle */
-  .toggle-container { display: flex; align-items: center; gap: 8px; font-size: 14px; }
-  .switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+  .toggle-container { display: flex; align-items: center; gap: 12px; }
+  .switch { position: relative; display: inline-block; width: 48px; height: 26px; flex-shrink: 0; }
   .switch input { opacity: 0; width: 0; height: 0; }
-  .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #475569; transition: .3s; border-radius: 24px; }
-  .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+  .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #475569; transition: .3s; border-radius: 26px; }
+  .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
   input:checked + .slider { background-color: var(--color-abyss); }
-  input:checked + .slider:before { transform: translateX(20px); }
+  input:checked + .slider:before { transform: translateX(22px); }
 
   /* 按鈕群 */
-  .btn-group { display: flex; gap: 10px; }
-  button { padding: 12px 18px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 10px; width: 100%; }
+  button { 
+    padding: 14px; border: none; border-radius: 6px; font-weight: bold; 
+    cursor: pointer; transition: 0.2s; font-size: 14px; 
+    flex: 1 1 150px; /* 最小寬度 150px，自動填滿 */
+    display: flex; align-items: center; justify-content: center; gap: 6px; 
+  }
   .btn-execute { background: var(--color-source); color: white; }
   .btn-execute:hover { background: #2563eb; }
   .btn-execute:disabled { opacity: 0.5; cursor: not-allowed; }
   .btn-reset { background: #475569; color: white; }
   .btn-reset:hover { background: #334155; }
   
-  /* 核心指令集按鈕 (預設隱藏) */
-  .btn-purge { background: #f59e0b; color: #000; display: none; animation: pulseBtn 1.5s infinite; }
+  .btn-purge { background: #f59e0b; color: #000; display: none; animation: pulseBtn 1.5s infinite; flex: 1 1 100%; }
   .btn-purge:hover { background: #d97706; }
 
   /* 狀態列 */
-  .status-bar { padding: 15px 20px; background: #000; border-bottom: 1px solid var(--border); font-size: 14px; color: var(--color-success); font-family: monospace; min-height: 20px; transition: color 0.3s; line-height: 1.5; }
+  .status-bar { padding: 15px 20px; background: #000; border-bottom: 1px solid var(--border); font-size: 14px; color: var(--color-success); font-family: monospace; min-height: 20px; line-height: 1.6; }
 
-  /* 畫布區塊：預設改為手機版垂直佈局 */
-  .workspace { display: flex; flex-direction: column; gap: 20px; padding: 20px; min-height: 400px; }
-  .col-right { display: flex; flex-direction: column; gap: 20px; }
+  /* 畫布區塊：流體佈局 */
+  .workspace { display: flex; flex-wrap: wrap; gap: 20px; padding: 20px; min-height: 400px; align-items: stretch; }
+  
+  /* 左區塊與右區塊的自動斷行設定 */
+  .zone-left { flex: 1 1 250px; display: flex; flex-direction: column; }
+  .zone-right { flex: 2 1 300px; display: flex; flex-direction: column; gap: 20px; }
   
   .zone { background: #0f172a; border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 10px; border: 2px dashed #334155; position: relative; }
   .zone-title { font-size: 14px; font-weight: bold; margin: 0; padding-bottom: 10px; border-bottom: 1px solid #1e293b; display: flex; align-items: center; gap: 8px; }
   
-  #zone-source { border-color: var(--color-source); min-height: 120px; }
-  #zone-context { border-color: var(--color-context); min-height: 120px; }
-  #zone-abyss { border-color: var(--color-abyss); background: #1a0a0a; flex: 1; min-height: 120px; }
+  #zone-source { border-color: var(--color-source); height: 100%; min-height: 150px; }
+  #zone-context { border-color: var(--color-context); min-height: 150px; }
+  #zone-abyss { border-color: var(--color-abyss); background: #1a0a0a; flex: 1; min-height: 150px; }
   
   .block-container { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 10px; }
 
   /* 資料區塊 (Blocks) */
   .data-block { 
-    padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: bold; text-align: center; 
+    padding: 10px 14px; border-radius: 6px; font-size: 13px; font-weight: bold; text-align: center; 
     background: #1e293b; border: 1px solid #475569; color: white;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     animation: popIn 0.3s ease-out forwards;
   }
   
-  /* 特定狀態的區塊樣式 */
   .data-block.prefix { border-color: var(--color-success); color: var(--color-success); background: rgba(16, 185, 129, 0.1); }
   .data-block.suffix { border-color: var(--color-source); color: var(--color-source); background: rgba(59, 130, 246, 0.1); }
   .data-block.lost { border-color: var(--color-abyss); color: #fca5a5; background: rgba(239, 68, 68, 0.1); text-decoration: line-through; opacity: 0.8; }
@@ -88,27 +117,6 @@
 
   @keyframes popIn { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
   @keyframes pulseBtn { 0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); } 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }
-
-  /* =========================================
-     自適應魔法：手機與電腦版的完美切換
-  ========================================= */
-
-  /* 針對窄螢幕 (手機版) 強制將選單與按鈕撐滿寬度 */
-  @media (max-width: 767px) {
-    .control-row { flex-direction: column; align-items: flex-start; gap: 15px; }
-    .input-group { flex-direction: column; align-items: flex-start; width: 100%; }
-    select { width: 100%; }
-    .btn-group { width: 100%; }
-    .btn-execute { flex: 2; }
-    .btn-reset { flex: 1; }
-    .btn-purge { width: 100%; }
-  }
-
-  /* 針對寬螢幕 (電腦版) 恢復左一右二的 Grid 佈局 */
-  @media (min-width: 768px) {
-    .workspace { display: grid; grid-template-columns: 1fr 1.5fr; }
-  }
-
 </style>
 </head>
 <body>
@@ -117,28 +125,29 @@
   <div class="controls-header">
     <div class="control-row">
       <div class="input-group">
-        <span style="font-size: 14px; font-weight: bold;">1. 選擇輸入機制：</span>
+        <label>1. 選擇輸入機制：</label>
         <select id="input-mode" onchange="checkState()">
           <option value="upload">📄 大檔案上傳 (Large File Upload)</option>
           <option value="paste">📝 純文字貼上 (Direct Paste)</option>
         </select>
       </div>
       
-      <div class="toggle-container">
-        <b>2. 啟動同名檔案污染：</b>
-        <label class="switch">
-          <input type="checkbox" id="pollution-toggle" onchange="checkState()">
-          <span class="slider"></span>
-        </label>
+      <div class="toggle-wrapper">
+        <label>2. 啟動同名檔案污染：</label>
+        <div class="toggle-container">
+          <label class="switch">
+            <input type="checkbox" id="pollution-toggle" onchange="toggleState()">
+            <span class="slider"></span>
+          </label>
+          <span id="toggle-label" style="color: var(--text-muted); font-size: 13px;">關閉 (Off)</span>
+        </div>
       </div>
     </div>
 
-    <div class="control-row">
-      <div class="btn-group">
-        <button id="btn-execute" class="btn-execute" onclick="executeWrite()">▶ 3. 執行寫入 (Execute)</button>
-        <button id="btn-reset" class="btn-reset" onclick="resetSystem()">🔄 重置</button>
-      </div>
-      <button id="btn-purge" class="btn-purge" onclick="executePurge()">🔥 執行核心指令集 (Purge Cache)</button>
+    <div class="btn-row">
+      <button id="btn-execute" class="btn-execute" onclick="executeWrite()">▶ 3. 執行寫入 (Execute)</button>
+      <button id="btn-reset" class="btn-reset" onclick="resetSystem()">🔄 重置系統 (Reset)</button>
+      <button id="btn-purge" class="btn-purge" onclick="executePurge()">🔥 清除幽靈快取 (Purge Cache)</button>
     </div>
   </div>
 
@@ -147,12 +156,14 @@
   </div>
 
   <div class="workspace">
-    <div class="zone" id="zone-source">
-      <h3 class="zone-title" style="color: var(--color-source);">📄 來源檔案 (Source)</h3>
-      <div class="block-container" id="container-source"></div>
+    <div class="zone-left">
+      <div class="zone" id="zone-source">
+        <h3 class="zone-title" style="color: var(--color-source);">📄 來源檔案 (Source)</h3>
+        <div class="block-container" id="container-source"></div>
+      </div>
     </div>
     
-    <div class="col-right">
+    <div class="zone-right">
       <div class="zone" id="zone-context">
         <h3 class="zone-title" style="color: var(--color-context);">🧠 AI 金鑰區 (Context Window)</h3>
         <div class="block-container" id="container-context"></div>
@@ -167,9 +178,9 @@
 </div>
 
 <script>
-  // DOM 元素
   const elMode = document.getElementById('input-mode');
   const elPollution = document.getElementById('pollution-toggle');
+  const toggleLabel = document.getElementById('toggle-label');
   const btnExecute = document.getElementById('btn-execute');
   const btnPurge = document.getElementById('btn-purge');
   const statusBar = document.getElementById('status-bar');
@@ -178,10 +189,8 @@
   const cContext = document.getElementById('container-context');
   const cAbyss = document.getElementById('container-abyss');
 
-  // 系統狀態
   let hasExecuted = false;
 
-  // 工具函數：產生區塊 HTML
   function createBlock(id, label, className = '') {
     const div = document.createElement('div');
     div.className = `data-block ${className}`;
@@ -190,29 +199,30 @@
     return div;
   }
 
-  // 工具函數：更新狀態文字
   function setStatus(text, color = "var(--color-success)") {
     statusBar.innerHTML = "> " + text;
     statusBar.style.color = color;
   }
 
-  // 初始/重置防呆機制
+  function toggleState() {
+    toggleLabel.innerText = elPollution.checked ? "啟動 (On)" : "關閉 (Off)";
+    toggleLabel.style.color = elPollution.checked ? "var(--color-abyss)" : "var(--text-muted)";
+    checkState();
+  }
+
   function checkState() {
     if (hasExecuted) resetSystem();
   }
 
-  // 重置系統
   function resetSystem() {
     hasExecuted = false;
     btnExecute.disabled = false;
-    btnPurge.style.display = 'none'; // 嚴格隱藏核心指令集按鈕
+    btnPurge.style.display = 'none'; 
     
-    // 清空所有容器
     cSource.innerHTML = '';
     cContext.innerHTML = '';
     cAbyss.innerHTML = '';
 
-    // 重新產生來源檔案的 10 個區塊
     for (let i = 1; i <= 10; i++) {
       cSource.appendChild(createBlock(`src-${i}`, `區塊 ${i}`));
     }
@@ -220,72 +230,50 @@
     setStatus("系統已重置。等待執行...");
   }
 
-  // 輔助動畫：非同步延遲
   const delay = ms => new Promise(res => setTimeout(res, ms));
 
-  // 主邏輯：執行寫入
   async function executeWrite() {
     hasExecuted = true;
-    btnExecute.disabled = true; // 嚴格鎖定執行按鈕，防止狂點 Bug
+    btnExecute.disabled = true; 
     
     const mode = elMode.value;
     const isPolluted = elPollution.checked;
     
-    // 清空來源視覺 (表示資料已送出)
     cSource.innerHTML = '';
 
     if (mode === 'upload' && !isPolluted) {
-      // 情況一：上傳 + 無污染 (Lost in the middle)
       setStatus("解析中... 發生 UI 片段化 (UI Snippetting)", "#facc15");
-      
-      // 頭部進入 Context
       for(let i=1; i<=3; i++) { cContext.appendChild(createBlock(`c-${i}`, `區塊 ${i}`, 'prefix')); await delay(100); }
-      // 中間掉入深淵
       for(let i=4; i<=7; i++) { cAbyss.appendChild(createBlock(`a-${i}`, `區塊 ${i}`, 'lost')); await delay(100); }
-      // 尾部進入 Context
       for(let i=8; i<=10; i++) { cContext.appendChild(createBlock(`c-${i}`, `區塊 ${i}`, 'suffix')); await delay(100); }
-      
       setStatus("UI 片段化發生：頭尾被擷取，中間資料掉入深淵 (Lost in the Middle)。", "#facc15");
-
     } 
     else if (mode === 'upload' && isPolluted) {
-      // 情況二：上傳 + 污染 (Cache Shadow)
       setStatus("解析中... 檢索到同名檔案，載入快取陰影！", "#ef4444");
       
-      // 幽靈霸佔空間
       cContext.appendChild(createBlock('ghost-1', '👻 舊版快取 V1', 'ghost')); await delay(150);
       cContext.appendChild(createBlock('ghost-2', '👻 舊版快取 V2', 'ghost')); await delay(150);
       
-      // 正確資料因空間被擠壓，只有極少數進入，其餘掉入深淵
       cContext.appendChild(createBlock('c-1', '區塊 1', 'prefix')); await delay(100);
       cContext.appendChild(createBlock('c-10', '區塊 10', 'suffix')); await delay(100);
       
       for(let i=2; i<=9; i++) { cAbyss.appendChild(createBlock(`a-${i}`, `區塊 ${i}`, 'lost')); await delay(80); }
       
       setStatus("快取陰影發生：同名檔案導致向量污染，舊記憶產生物理性錯位。", "#ef4444");
-      
-      // 唯一觸發核心指令按鈕的時機
       btnPurge.style.display = 'flex';
       
     } 
     else if (mode === 'paste') {
-      // 情況三：直接貼上 (繞過片段化)
       setStatus("解析中... 直接貼上繞過 UI 切割", "var(--color-success)");
-      
-      // 1-10 全部進入 Context
       for(let i=1; i<=10; i++) { cContext.appendChild(createBlock(`c-${i}`, `區塊 ${i}`, 'full')); await delay(80); }
-      
       setStatus("純文字貼上：繞過前端 UI 切割，100% 佔據上下文空間。", "var(--color-success)");
     }
   }
 
-  // 淨化邏輯：執行核心指令集
   async function executePurge() {
-    // 嚴格隱藏按鈕，確保只點一次
     btnPurge.style.display = 'none';
     setStatus("執行強制對齊指令... 正在摧毀幽靈快取", "#f59e0b");
 
-    // 1. 摧毀幽靈區塊
     const ghosts = document.querySelectorAll('.ghost');
     ghosts.forEach(g => g.classList.add('destroying'));
     await delay(400);
@@ -294,24 +282,21 @@
     setStatus("快取已清除。正在從深淵撈回正確上下文...", "#3b82f6");
     await delay(300);
 
-    // 2. 從深淵撈回本該進入的資料 (補齊 2,3 及 8,9)
     const blocksToRecover = [2, 3, 8, 9];
     for (let id of blocksToRecover) {
       const abyssBlock = document.getElementById(`block-a-${id}`);
       if (abyssBlock) {
-        abyssBlock.classList.add('destroying'); // 在深淵中消失
+        abyssBlock.classList.add('destroying');
         await delay(100);
       }
     }
     
-    // 從深淵移除 DOM
     for (let id of blocksToRecover) {
       const abyssBlock = document.getElementById(`block-a-${id}`);
       if (abyssBlock) abyssBlock.remove();
     }
 
-    // 3. 將撈回的資料放入 Context Window (照順序排列視覺)
-    cContext.innerHTML = ''; // 重繪以確保順序正確
+    cContext.innerHTML = ''; 
     cContext.appendChild(createBlock(`c-1`, `區塊 1`, 'prefix')); await delay(50);
     cContext.appendChild(createBlock(`c-2`, `區塊 2`, 'prefix')); await delay(50);
     cContext.appendChild(createBlock(`c-3`, `區塊 3`, 'prefix')); await delay(50);
@@ -319,12 +304,11 @@
     cContext.appendChild(createBlock(`c-9`, `區塊 9`, 'suffix')); await delay(50);
     cContext.appendChild(createBlock(`c-10`, `區塊 10`, 'suffix')); await delay(50);
 
-    setStatus("強制對齊完成：舊記憶已清空，真實上下文已恢復！<br><span style='color:#94a3b8; font-size:12px; margin-top:5px; display:block;'>* 註：中間區塊(4-7)仍因大檔案特性掉入深淵，但幽靈污染已解除。</span>", "var(--color-success)");
+    setStatus("強制對齊完成：舊記憶已清空，真實上下文已恢復！<br><span style='color:#94a3b8; font-size:12px; margin-top:5px; display:block;'>* 註：中間區塊仍因大檔案特性掉入深淵，但幽靈污染已解除。</span>", "var(--color-success)");
   }
 
-  // 初始載入
+  // 初始化
   resetSystem();
-
 </script>
 </body>
 </html>
