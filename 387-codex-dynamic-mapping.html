@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>全域聖典 4.0 體用合一動態映射圖 (防腰斬自適應版)</title>
+<title>全域聖典 4.0 體用合一動態映射圖 (終極防腰斬版)</title>
 <style>
   :root {
     --bg-dark: #070a13;
@@ -12,12 +12,10 @@
     --text-main: #f8fafc;
     --text-muted: #64748b;
     
-    /* 體 (物理層) 顏色 */
     --color-body-a: #10b981;
     --color-body-b: #f59e0b;
     --color-body-c: #3b82f6;
     
-    /* 用 (公路層) 顏色 */
     --color-func-c: #8b5cf6;
     --color-func-d: #ec4899;
   }
@@ -36,7 +34,6 @@
     padding: 15px;
   }
 
-  /* 外框改為流體高度，不再強制限制 */
   .container {
     width: 100%;
     max-width: 1000px;
@@ -49,10 +46,9 @@
     overflow: hidden;
   }
 
-  /* 頂部標題 */
   .header {
     background: #0b0f19;
-    padding: 18px 20px;
+    padding: 15px 20px;
     border-bottom: 1px solid var(--border-color);
     display: flex;
     justify-content: space-between;
@@ -60,61 +56,59 @@
     flex-wrap: wrap; 
     gap: 10px;
   }
-  .header-title { font-size: 15px; font-weight: bold; color: #38bdf8; display: flex; align-items: center; gap: 8px; }
-  .header-sub { font-size: 11px; color: var(--text-muted); font-family: monospace; }
+  .header-title { font-size: 15px; font-weight: bold; color: #38bdf8; display: flex; align-items: center; gap: 8px; margin: 0; }
+  .header-sub { font-size: 11px; color: var(--text-muted); font-family: monospace; margin: 0; }
 
-  /* 佈局切分 */
   .main-layout { 
     display: flex; 
     flex-direction: column; 
-    height: auto; 
   }
 
-  /* 左側/上方：側邊欄 */
   .sidebar {
     width: 100%;
     background: #0f172a;
-    padding: 25px;
+    padding: 20px;
     border-bottom: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 15px;
     z-index: 20;
   }
   
-  /* 標題與按鈕區加入 flex-shrink: 0，防止被壓縮 */
   .sidebar h3 { margin: 0; font-size: 15px; color: var(--text-main); border-bottom: 1px solid var(--border-color); padding-bottom: 10px; flex-shrink: 0; }
-  .controls { display: flex; gap: 10px; flex-shrink: 0; margin-top: auto; }
   
-  /* 時間軸區塊加入內部滾動條，防禦內容過多 */
+  /* 關鍵魔法：清單內部滾動設定 */
   .timeline { 
-    display: flex; flex-direction: column; gap: 15px; 
+    display: flex; flex-direction: column; gap: 12px; 
     margin: 0; padding: 0 5px 0 0; list-style: none; 
-    flex: 1; overflow-y: auto; 
+    flex: 1 1 0; /* 允許伸縮 */
+    min-height: 0; /* 防止子元素撐爆父容器 */
+    overflow-y: auto; /* 啟用垂直捲軸 */
   }
   /* 美化捲軸 */
   .timeline::-webkit-scrollbar { width: 6px; }
   .timeline::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
 
   .step-card {
-    background: #1e293b; padding: 15px; border-radius: 8px; border-left: 3px solid #334155;
-    font-size: 13px; line-height: 1.6; color: #94a3b8; transition: all 0.4s ease; opacity: 0.5;
+    background: #1e293b; padding: 12px; border-radius: 8px; border-left: 3px solid #334155;
+    font-size: 12px; line-height: 1.5; color: #94a3b8; transition: all 0.4s ease; opacity: 0.5;
   }
   .step-card.active {
     background: #2d3748; color: #fff; opacity: 1; transform: translateX(5px); box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   }
   
-  button { padding: 14px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; flex: 1; transition: 0.2s; display: flex; justify-content: center; align-items: center; }
+  /* 按鈕區絕對防壓縮 */
+  .controls { display: flex; gap: 10px; flex-shrink: 0; padding-top: 5px; }
+  button { padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; flex: 1; transition: 0.2s; display: flex; justify-content: center; align-items: center; }
   .btn-start { background: var(--color-body-b); color: #000; }
   .btn-start:hover { background: #d97706; }
   .btn-start:disabled { opacity: 0.5; cursor: not-allowed; }
   .btn-reset { background: transparent; border: 1px dashed #475569; color: var(--text-muted); flex: 0.3; }
   .btn-reset:hover { background: #ef4444; color: white; border-style: solid; border-color: #ef4444; }
 
-  /* 右側/下方：動態畫布區 */
   .canvas {
     width: 100%;
-    min-height: 480px; 
+    min-height: 400px; 
     position: relative;
     background: #070a13;
     overflow: hidden;
@@ -122,10 +116,7 @@
     flex: 1;
   }
 
-  .dimension-divider {
-    position: absolute; top: 50%; left: 0; width: 100%; height: 2px;
-    background: repeating-linear-gradient(90deg, #1f2937, #1f2937 10px, transparent 10px, transparent 20px); z-index: 1;
-  }
+  .dimension-divider { position: absolute; top: 50%; left: 0; width: 100%; height: 2px; background: repeating-linear-gradient(90deg, #1f2937, #1f2937 10px, transparent 10px, transparent 20px); z-index: 1; }
   .dim-label { position: absolute; font-size: 11px; font-weight: bold; letter-spacing: 1px; padding: 4px 8px; border-radius: 6px; z-index: 2; }
   .label-body { top: 10px; left: 10px; background: rgba(16, 185, 129, 0.1); color: var(--color-body-a); border: 1px solid var(--color-body-a); }
   .label-func { bottom: 10px; left: 10px; background: rgba(139, 92, 246, 0.1); color: var(--color-func-c); border: 1px solid var(--color-func-c); }
@@ -160,13 +151,15 @@
   .glow-d { box-shadow: 0 0 20px var(--color-func-d); transform: scale(1.05); border-color: var(--color-func-d) !important; color: #fff; border-style: solid !important; }
 
   /* =========================================
-     電腦與平板自適應 (大於 768px 時恢復左右排列) 
+     電腦與平板自適應 (固定高度，永不溢出)
   ========================================= */
   @media (min-width: 768px) {
-    /* 關鍵修復：改為 min-height，讓它能隨內容自動撐高 */
-    .main-layout { flex-direction: row; min-height: 650px; height: auto; align-items: stretch; }
-    .sidebar { width: 320px; border-right: 1px solid var(--border-color); border-bottom: none; }
-    .canvas { height: auto; min-height: unset; padding: 0; }
+    .main-layout { 
+      flex-direction: row; 
+      height: 550px; /* 強制鎖死總高度，確保 iframe 塞得下 */
+    }
+    .sidebar { width: 320px; border-right: 1px solid var(--border-color); border-bottom: none; height: 100%; }
+    .canvas { height: 100%; min-height: unset; padding: 0; }
     
     .header-title { font-size: 16px; }
     .header-sub { font-size: 12px; }
@@ -175,13 +168,13 @@
     .label-body { top: 20px; left: 20px; }
     .label-func { bottom: 20px; left: 20px; }
 
-    .node { font-size: 14px; padding: 15px 20px; width: auto; }
+    .node { font-size: 13px; padding: 15px 20px; width: auto; }
     .node small { font-size: 11px; }
     
-    #node-body-a { top: 80px; left: 80px; width: auto; }
-    #node-body-b { top: 80px; left: auto; right: 80px; width: 140px; }
-    #node-func-c { bottom: 80px; left: auto; right: 80px; width: auto; }
-    #node-func-d { bottom: 80px; right: auto; left: 180px; width: auto; }
+    #node-body-a { top: 80px; left: 60px; width: auto; }
+    #node-body-b { top: 80px; left: auto; right: 60px; width: 140px; }
+    #node-func-c { bottom: 80px; left: auto; right: 60px; width: auto; }
+    #node-func-d { bottom: 80px; right: auto; left: 160px; width: auto; }
 
     .path-tag { font-size: 11px; transform: none; }
   }
@@ -316,7 +309,7 @@
     packet.style.display = 'none';
     packet.style.transition = 'none';
     btnStart.disabled = false;
-    document.querySelector('.header-sub').innerText = "STATUS: IDLE | DIMENSION: 2D";
+    document.querySelector('.header-sub').innerText = "STATUS: IDLE | DIMENSION: CROSS-LAYER";
     
     nBodyA.classList.remove('glow-a');
     nBodyB.classList.remove('glow-b');
