@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  :root {
+    --bg-color: #0f172a;
+    --card-bg: #1e293b;
+    --accent: #38bdf8;
+    --terminal: #10b981;
+    --brain: #f59e0b;
+    --engine: #8b5cf6;
+  }
+  
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-color); color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; box-sizing: border-box; }
+  .container { width: 100%; max-width: 800px; background: var(--card-bg); padding: 20px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); box-sizing: border-box; }
+  
+  /* 選項切換區：自適應調整 */
+  .settings { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px; }
+  .settings span { font-weight: bold; }
+  select { padding: 10px; border-radius: 6px; background: #334155; color: white; border: 1px solid var(--accent); cursor: pointer; font-size: 14px; width: 100%; box-sizing: border-box;}
+
+  /* 視覺呈現區：改用 Flexbox 進行自適應排版 */
+  .canvas { 
+    position: relative; 
+    border: 1px dashed #475569; border-radius: 12px; margin-bottom: 20px; 
+    padding: 40px 20px; /* 給予上下內邊距 */
+    display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 60px;
+    overflow: hidden; min-height: 400px;
+  }
+  
+  .layer { width: 120px; text-align: center; font-size: 13px; z-index: 5; background: var(--card-bg); padding: 10px; border-radius: 8px; }
+  .layer-icon { font-size: 36px; margin-bottom: 5px; }
+  
+  #layer-terminal { color: var(--terminal); border: 1px solid var(--terminal); }
+  #layer-brain { color: var(--brain); border: 1px solid var(--brain); }
+  #layer-engine { color: var(--engine); border: 1px solid var(--engine); }
+
+  /* SVG 與連線標籤 */
+  svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+  .path-line { stroke: #475569; stroke-width: 2; stroke-dasharray: 5,5; transition: 0.3s; }
+  
+  .line-label { position: absolute; font-size: 11px; color: #94a3b8; text-align: center; width: 140px; background: var(--card-bg); padding: 2px 5px; border-radius: 4px; z-index: 2; border: 1px solid #334155; }
+
+  /* 動畫封包 */
+  #packet {
+    position: absolute; width: 14px; height: 14px; background: white; border-radius: 50%;
+    box-shadow: 0 0 12px white; display: none; z-index: 10; margin-top: -7px; margin-left: -7px;
+  }
+
+  /* 控制與狀態 */
+  .controls { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  button { padding: 15px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 15px; transition: 0.2s; }
+  .btn-send { background: var(--accent); color: #000; }
+  .btn-send:hover { background: #0284c7; color: white; }
+  .btn-reset { background: #475569; color: white; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  
+  #status-box { margin-top: 15px; padding: 15px; background: #000; border-radius: 8px; font-family: monospace; font-size: 14px; color: #2dd4bf; border-left: 4px solid var(--accent); line-height: 1.5; min-height: 45px; }
+
+  /* =========================================
+     電腦與平板自適應 (大於 768px 時橫向排列) 
+  ========================================= */
+  @media (min-width: 768px) {
+    .settings { flex-direction: row; }
+    select { width: auto; min-width: 250px; }
+    .canvas { flex-direction: row; height: 250px; min-height: 250px; padding: 20px 40px; gap: 0; }
+    .controls { grid-template-columns: 2fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2 style="text-align:center; margin-top:0;">CAO API 流程視覺化</h2>
+
+  <div class="settings">
+    <span>Dify 部署位置：</span>
+    <select id="deploy-mode" onchange="resetSim()">
+      <option value="local">地端 128GB 母艦 (Local PC)</option>
+      <option value="cloud">雲端伺服器 (Cloud)</option>
+    </select>
+  </div>
+
+  <div class="canvas" id="canvas-area">
+    <svg>
+      <line id="line-1" class="path-line" />
+      <line id="line-2" class="path-line" />
+    </svg>
+
+    <div class="line-label" id="label-connection">Tailscale 虛擬內網</div>
+    <div class="line-label" id="label-api">AWS API (網際網路)</div>
+
+    <div id="packet"></div>
+
+    <div class="layer" id="layer-terminal">
+      <div class="layer-icon">📱</div>
+      <b>終端設備</b><br>S24 Ultra
+    </div>
+
+    <div class="layer" id="layer-brain">
+      <div class="layer-icon">🧠</div>
+      <b>核心大腦</b><br>Dify Server
+    </div>
+
+    <div class="layer" id="layer-engine">
+      <div class="layer-icon">⚡</div>
+      <b>算力引擎</b><br>Claude 3.5
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="send-btn" class="btn-send" onclick="startFlow()">發送 CAO 總結請求</button>
+    <button class="btn-reset" onclick="resetSim()">🔄 重置系統</button>
+  </div>
+
+  <div id="status-box">系統就緒。等待指令...</div>
+</div>
+
+<script>
+  const packet = document.getElementById('packet');
+  const statusBox = document.getElementById('status-box');
+  const deployMode = document.getElementById('deploy-mode');
+  const connLabel = document.getElementById('label-connection');
+  const apiLabel = document.getElementById('label-api');
+  const sendBtn = document.getElementById('send-btn');
+  
+  const canvasArea = document.getElementById('canvas-area');
+  const nTerminal = document.getElementById('layer-terminal');
+  const nBrain = document.getElementById('layer-brain');
+  const nEngine = document.getElementById('layer-engine');
+  
+  const line1 = document.getElementById('line-1');
+  const line2 = document.getElementById('line-2');
+
+  function setStatus(msg) { statusBox.innerText = "> " + msg; }
+
+  // 計算節點中心座標 (自適應的核心魔法)
+  function getCenter(el) {
+    const rect = el.getBoundingClientRect();
+    const canvasRect = canvasArea.getBoundingClientRect();
+    return {
+      x: rect.left - canvasRect.left + rect.width / 2,
+      y: rect.top - canvasRect.top + rect.height / 2
+    };
+  }
+
+  // 動態繪製連線與標籤位置
+  function drawLayout() {
+    const pT = getCenter(nTerminal);
+    const pB = getCenter(nBrain);
+    const pE = getCenter(nEngine);
+
+    // 畫線
+    line1.setAttribute('x1', pT.x); line1.setAttribute('y1', pT.y);
+    line1.setAttribute('x2', pB.x); line1.setAttribute('y2', pB.y);
+    
+    line2.setAttribute('x1', pB.x); line2.setAttribute('y1', pB.y);
+    line2.setAttribute('x2', pE.x); line2.setAttribute('y2', pE.y);
+
+    // 定位標籤 (置中於兩點之間，並稍微往上偏移 20px 避免擋到線)
+    connLabel.style.left = ((pT.x + pB.x) / 2 - 70) + 'px'; // 70 是標籤寬度的一半
+    connLabel.style.top = ((pT.y + pB.y) / 2 - 25) + 'px';
+    
+    apiLabel.style.left = ((pB.x + pE.x) / 2 - 70) + 'px';
+    apiLabel.style.top = ((pB.y + pE.y) / 2 - 25) + 'px';
+  }
+
+  // 當視窗縮放時自動重繪
+  window.addEventListener('resize', drawLayout);
+
+  function resetSim() {
+    drawLayout(); // 確保線條正確
+    packet.style.display = 'none';
+    packet.style.transition = 'none';
+    sendBtn.disabled = false;
+    
+    // 更新連線標籤文字
+    if (deployMode.value === 'local') {
+      connLabel.innerText = "Tailscale 虛擬內網";
+      setStatus("已切換至地端模式。透過 Tailscale 安全連線。");
+    } else {
+      connLabel.innerText = "網際網路 (Internet)";
+      setStatus("已切換至雲端模式。透過網際網路連線。");
+    }
+  }
+
+  async function movePacket(startEl, endEl, duration) {
+    const from = getCenter(startEl);
+    const to = getCenter(endEl);
+    
+    packet.style.display = 'block';
+    packet.style.transition = 'none';
+    packet.style.left = from.x + 'px';
+    packet.style.top = from.y + 'px';
+    
+    await new Promise(r => setTimeout(r, 50)); // 強制渲染
+    
+    packet.style.transition = `all ${duration}s cubic-bezier(0.4, 0, 0.2, 1)`;
+    packet.style.left = to.x + 'px';
+    packet.style.top = to.y + 'px';
+    
+    await new Promise(r => setTimeout(r, duration * 1000));
+  }
+
+  async function startFlow() {
+    sendBtn.disabled = true;
+    
+    setStatus("S24 Ultra 發送請求...");
+    await movePacket(nTerminal, nBrain, 0.8);
+    
+    setStatus("Dify 接收並啟動工作流，調用 Claude 3.5...");
+    await movePacket(nBrain, nEngine, 0.8);
+    
+    setStatus("Claude 3.5 運算中...");
+    packet.style.display = 'none';
+    await new Promise(r => setTimeout(r, 1000));
+    
+    setStatus("收到運算結果，傳回 Dify 處理中...");
+    await movePacket(nEngine, nBrain, 0.8);
+    
+    setStatus("結果回傳至手機！");
+    await movePacket(nBrain, nTerminal, 0.8);
+    
+    await new Promise(r => setTimeout(r, 500));
+    packet.style.display = 'none';
+    sendBtn.disabled = false;
+  }
+
+  // 初始化延遲執行一次以確保字體與佈局載入完畢
+  setTimeout(resetSim, 100);
+</script>
+
+</body>
+</html>
