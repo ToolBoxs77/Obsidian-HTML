@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Obsidian BMO 架構模擬</title>
+<title>Obsidian BMO 架構模擬 (自適應版)</title>
 <style>
   :root {
     --bg-main: #121212;
@@ -19,68 +19,32 @@
   
   body { 
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-    background: var(--bg-main); 
-    color: var(--text-main); 
-    margin: 0; 
-    display: flex; 
-    justify-content: center; 
-    align-items: center; 
-    min-height: 100vh;
-    padding: 20px;
-    box-sizing: border-box;
+    background: var(--bg-main); color: var(--text-main); 
+    margin: 0; padding: 15px; box-sizing: border-box;
+    display: flex; justify-content: center; align-items: center; min-height: 100vh;
   }
   
+  /* 外框改為預設垂直堆疊 (手機版) */
   .app-container { 
-    width: 100%; 
-    max-width: 900px; 
-    height: 550px; 
-    background: var(--bg-canvas); 
-    border-radius: 12px; 
-    box-shadow: 0 10px 30px rgba(0,0,0,0.8); 
-    display: flex; 
-    overflow: hidden; 
-    border: 1px solid var(--border-color);
+    width: 100%; max-width: 900px; min-height: 600px;
+    background: var(--bg-canvas); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); 
+    display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border-color);
   }
   
-  /* 左側側邊欄 (模擬 Obsidian) */
+  /* 側邊欄 (手機版預設在上方，寬度 100%) */
   .sidebar {
-    width: 300px;
-    background: var(--bg-sidebar);
-    border-right: 1px solid var(--border-color);
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    position: relative;
-    z-index: 10;
+    width: 100%; background: var(--bg-sidebar); border-bottom: 1px solid var(--border-color);
+    padding: 20px; display: flex; flex-direction: column; gap: 15px; box-sizing: border-box; z-index: 10;
   }
   
-  .sidebar h3 { margin: 0 0 10px 0; font-size: 16px; display: flex; align-items: center; gap: 8px; color: #a78bfa; }
+  .sidebar h3 { margin: 0 0 5px 0; font-size: 16px; display: flex; align-items: center; gap: 8px; color: #a78bfa; }
   
   .input-group { display: flex; flex-direction: column; gap: 8px; }
   .input-group label { font-size: 12px; color: var(--text-muted); font-weight: bold; }
-  select { 
-    padding: 10px; 
-    border-radius: 6px; 
-    background: #2d2d2d; 
-    color: white; 
-    border: 1px solid #555; 
-    font-size: 14px; 
-    cursor: pointer; 
-    outline: none;
-  }
+  select { padding: 10px; border-radius: 6px; background: #2d2d2d; color: white; border: 1px solid #555; font-size: 14px; cursor: pointer; outline: none; width: 100%; box-sizing: border-box; }
   
-  .button-group { display: flex; gap: 10px; margin-top: 10px; }
-  button { 
-    padding: 10px 15px; 
-    border: none; 
-    border-radius: 6px; 
-    font-weight: bold; 
-    cursor: pointer; 
-    transition: 0.2s; 
-    font-size: 14px; 
-    flex: 1;
-  }
+  .button-group { display: flex; gap: 10px; margin-top: 5px; }
+  button { padding: 12px 15px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 14px; flex: 1; }
   .btn-send { background: var(--accent-purple); color: white; }
   .btn-send:hover { background: #7c3aed; }
   .btn-reset { background: #444; color: white; flex: 0.5; }
@@ -88,75 +52,26 @@
   button:disabled { opacity: 0.5; cursor: not-allowed; }
 
   /* 產生的檔案區塊 */
-  .generated-file {
-    margin-top: 20px;
-    padding: 12px;
-    background: #252525;
-    border: 1px dashed #555;
-    border-radius: 8px;
-    font-size: 13px;
-    display: none; /* 初始隱藏 */
-    animation: fadeIn 0.5s ease;
-  }
+  .generated-file { margin-top: 15px; padding: 12px; background: #252525; border: 1px dashed #555; border-radius: 8px; font-size: 13px; display: none; animation: fadeIn 0.5s ease; }
   .generated-file span { display: block; margin-top: 5px; font-size: 11px; color: var(--text-muted); }
   
-  .status-text {
-    margin-top: auto;
-    padding: 15px;
-    background: #111;
-    border-radius: 8px;
-    border-left: 4px solid #444;
-    font-size: 13px;
-    line-height: 1.5;
-    color: #a3e635;
-  }
+  .status-text { margin-top: auto; padding: 15px; background: #111; border-radius: 8px; border-left: 4px solid #444; font-size: 13px; line-height: 1.5; color: #a3e635; }
 
-  /* 右側畫布區 */
-  .canvas {
-    flex: 1;
-    position: relative;
-    padding: 30px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-  }
+  /* 畫布區 (手機版調整最小高度以容納節點) */
+  .canvas { flex: 1; position: relative; padding: 20px; display: flex; flex-direction: column; min-height: 450px; }
   
   /* 節點樣式 */
-  .node { 
-    padding: 15px 20px; 
-    border-radius: 8px; 
-    font-weight: bold; 
-    text-align: center; 
-    background: #252525; 
-    z-index: 2; 
-    position: absolute; 
-    border: 2px solid transparent; 
-    transition: 0.3s; 
-    box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
-  }
-  .node small { display: block; font-size: 12px; font-weight: normal; color: #aaa; margin-top: 4px; }
+  .node { padding: 12px 15px; border-radius: 8px; font-weight: bold; text-align: center; background: #252535; z-index: 2; position: absolute; border: 2px solid transparent; transition: 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.3); font-size: 14px; }
+  .node small { display: block; font-size: 11px; font-weight: normal; color: #aaa; margin-top: 4px; }
   .node.active { transform: scale(1.05); }
 
-  /* 節點定位 */
-  #node-sidebar-port { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 10px; height: 10px; background: transparent; }
+  /* 節點定位 (手機版預設座標) */
+  #node-sidebar-port { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 10px; height: 10px; background: transparent; }
+  #node-cloud { top: 40px; right: 5%; border-color: var(--accent-blue); }
+  #node-tunnel { top: 150px; left: 50%; transform: translateX(-50%); background: #1a2e25; border-color: #10b981; border-style: dashed; font-size: 12px; padding: 10px; }
+  #node-dify { bottom: 30px; left: 50%; transform: translateX(-50%); border-color: var(--accent-orange); width: 200px; display: flex; flex-direction: column; align-items: center; gap: 10px; background: #2d2418; }
   
-  #node-cloud { top: 60px; right: 50px; border-color: var(--accent-blue); }
-  
-  #node-tunnel { top: 220px; right: 280px; background: #1a2e25; border-color: #10b981; border-style: dashed; font-size: 13px; padding: 10px; }
-  
-  #node-dify { bottom: 60px; right: 50px; border-color: var(--accent-orange); width: 220px; display: flex; flex-direction: column; align-items: center; gap: 15px; background: #2d2418; }
-  
-  .sub-node { 
-    font-size: 12px; 
-    padding: 8px 12px; 
-    background: #222; 
-    border: 1px solid var(--accent-orange); 
-    border-radius: 6px; 
-    color: #fcd34d; 
-    transition: 0.3s; 
-    width: 90%;
-  }
+  .sub-node { font-size: 11px; padding: 8px 10px; background: #222; border: 1px solid var(--accent-orange); border-radius: 6px; color: #fcd34d; transition: 0.3s; width: 90%; box-sizing: border-box; }
   .sub-node.pulse { background: var(--accent-orange); color: #000; box-shadow: 0 0 15px var(--accent-orange); }
 
   /* SVG 連線 */
@@ -165,25 +80,26 @@
   .path-active { stroke: #fff; stroke-width: 3; stroke-dasharray: none; filter: drop-shadow(0 0 5px rgba(255,255,255,0.5)); }
 
   /* 動畫封包 */
-  #packet { 
-    position: absolute; 
-    width: 12px; 
-    height: 12px; 
-    background: white; 
-    border-radius: 50%; 
-    box-shadow: 0 0 12px white; 
-    z-index: 10; 
-    display: none; 
-    margin-top: -6px; 
-    margin-left: -6px; 
-  }
+  #packet { position: absolute; width: 12px; height: 12px; background: white; border-radius: 50%; box-shadow: 0 0 12px white; z-index: 10; display: none; margin-top: -6px; margin-left: -6px; }
 
   @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 
-  /* 未選擇模式時的樣式淡化 */
   .canvas.dim-dify #node-dify, .canvas.dim-dify #node-tunnel { opacity: 0.2; filter: grayscale(100%); }
   .canvas.dim-cloud #node-cloud { opacity: 0.2; filter: grayscale(100%); }
 
+  /* =========================================
+     電腦與平板自適應 (大於 768px 時恢復左右排列) 
+  ========================================= */
+  @media (min-width: 768px) {
+    .app-container { flex-direction: row; height: 550px; min-height: 550px; }
+    .sidebar { width: 300px; border-right: 1px solid var(--border-color); border-bottom: none; }
+    
+    /* 電腦版節點座標 */
+    #node-sidebar-port { left: 0; top: 50%; transform: translateY(-50%); }
+    #node-cloud { top: 60px; right: 50px; left: auto; transform: none; }
+    #node-tunnel { top: 220px; right: 280px; left: auto; transform: none; font-size: 13px; }
+    #node-dify { bottom: 60px; right: 50px; left: auto; transform: none; width: 220px; }
+  }
 </style>
 </head>
 <body>
@@ -217,7 +133,9 @@
   </div>
 
   <div class="canvas" id="canvas-area">
-    <div id="node-sidebar-port"></div> <svg>
+    <div id="node-sidebar-port"></div> 
+    
+    <svg>
       <path id="path-cloud" class="path-line" d="" />
       <path id="path-tunnel" class="path-line" d="" />
       <path id="path-dify" class="path-line" d="" />
@@ -250,14 +168,12 @@
   const generatedFile = document.getElementById('generated-file');
   const fileTitle = document.getElementById('file-title');
   
-  // 節點
   const port = document.getElementById('node-sidebar-port');
   const nodeCloud = document.getElementById('node-cloud');
   const nodeTunnel = document.getElementById('node-tunnel');
   const nodeDify = document.getElementById('node-dify');
   const nodeFtoKb = document.getElementById('node-fto-kb');
   
-  // 路徑
   const pathCloud = document.getElementById('path-cloud');
   const pathTunnel = document.getElementById('path-tunnel');
   const pathDify = document.getElementById('path-dify');
@@ -272,42 +188,47 @@
     };
   }
 
+  // 智慧繪製線條：區分手機版與電腦版
   function drawLines() {
     const pPort = getCenter(port);
     const pCloud = getCenter(nodeCloud);
     const pTunnel = getCenter(nodeTunnel);
     const pDify = getCenter(nodeDify);
 
-    // 側邊欄 -> 雲端 (曲線)
-    pathCloud.setAttribute('d', `M ${pPort.x} ${pPort.y} Q ${pPort.x + 150} ${pCloud.y} ${pCloud.x} ${pCloud.y}`);
-    // 側邊欄 -> 隧道 -> Dify (折線)
+    // 判斷目前是否為手機版 (垂直排列)
+    const isMobile = window.innerWidth < 768;
+
+    if (isMobile) {
+      // 手機版：發射點在上方，雲端在右側，線條往下彎
+      pathCloud.setAttribute('d', `M ${pPort.x} ${pPort.y} Q ${pCloud.x} ${pPort.y + 60} ${pCloud.x} ${pCloud.y}`);
+    } else {
+      // 電腦版：發射點在左側，雲端在右側，線條往右彎
+      pathCloud.setAttribute('d', `M ${pPort.x} ${pPort.y} Q ${pPort.x + 150} ${pCloud.y} ${pCloud.x} ${pCloud.y}`);
+    }
+
+    // 隧道與 Dify 連線 (直接直線連線)
     pathTunnel.setAttribute('d', `M ${pPort.x} ${pPort.y} L ${pTunnel.x} ${pTunnel.y}`);
     pathDify.setAttribute('d', `M ${pTunnel.x} ${pTunnel.y} L ${pDify.x} ${pDify.y}`);
   }
 
+  // 視窗縮放時自動重新計算
   window.addEventListener('resize', drawLines);
 
-  // 初始化與重置
   function resetSim() {
     drawLines();
     const mode = modelSelect.value;
     
-    // 停止動畫
     packet.style.display = 'none';
     packet.style.transition = 'none';
     btnSend.disabled = false;
-    
-    // 隱藏產生的檔案
     generatedFile.style.display = 'none';
     
-    // 移除特效
     nodeCloud.classList.remove('active');
     nodeTunnel.classList.remove('active');
     nodeDify.classList.remove('active');
     nodeFtoKb.classList.remove('pulse');
     document.querySelectorAll('.path-line').forEach(l => l.classList.remove('path-active'));
 
-    // 依據下拉選單更新 UI 亮度與預設提示文字
     statusText.style.borderLeftColor = '#444';
     if (mode === 'general') {
       canvasArea.className = 'canvas dim-dify';
@@ -318,7 +239,6 @@
     }
   }
 
-  // 移動動畫
   async function movePacket(startEl, endEl, duration, color, pathEl = null) {
     const start = getCenter(startEl);
     const end = getCenter(endEl);
@@ -342,15 +262,13 @@
     if(pathEl) pathEl.classList.remove('path-active');
   }
 
-  // 執行主流程
   async function startFlow() {
     btnSend.disabled = true;
     generatedFile.style.display = 'none';
     const mode = modelSelect.value;
 
     if (mode === 'general') {
-      // --- 廣域大腦流程 ---
-      statusText.style.borderLeftColor = '#3b82f6'; // Blue
+      statusText.style.borderLeftColor = '#3b82f6';
       statusText.innerHTML = "訊號發送：直連 Cloud API 中...";
       
       await movePacket(port, nodeCloud, 1.0, '#3b82f6', pathCloud);
@@ -364,15 +282,13 @@
       await movePacket(nodeCloud, port, 1.0, '#3b82f6', pathCloud);
       packet.style.display = 'none';
       
-      // 顯示產出
       fileTitle.innerHTML = "📄 對話紀錄.md";
       generatedFile.style.borderColor = '#3b82f6';
       generatedFile.style.display = 'block';
       statusText.innerHTML = "<b>正在使用官方直連 API。擁有全網廣大知識，適合詢問顯卡、軟體教學等通用問題。</b>";
 
     } else {
-      // --- FTO 專利專家流程 ---
-      statusText.style.borderLeftColor = '#f59e0b'; // Orange
+      statusText.style.borderLeftColor = '#f59e0b';
       statusText.innerHTML = "訊號發送：進入 Tailscale 虛擬內網...";
       
       await movePacket(port, nodeTunnel, 0.6, '#f59e0b', pathTunnel);
@@ -401,7 +317,6 @@
       
       packet.style.display = 'none';
       
-      // 顯示產出
       fileTitle.innerHTML = "📄 專利分析紀錄.md";
       generatedFile.style.borderColor = '#f59e0b';
       generatedFile.style.display = 'block';
@@ -411,7 +326,7 @@
     btnSend.disabled = false;
   }
 
-  // 初次載入
+  // 初次載入與繪製
   setTimeout(resetSim, 100);
 </script>
 
