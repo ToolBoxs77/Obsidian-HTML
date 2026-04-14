@@ -2,8 +2,8 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>系統持久性與防禦邏輯模擬器 (自適應修復版)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>系統持久性與防禦邏輯模擬器 (真自適應防禦版)</title>
 <style>
   :root {
     --bg-dark: #0b0f19;
@@ -12,28 +12,31 @@
     --text-main: #f8fafc;
     --text-muted: #64748b;
     
-    --color-delta: #3b82f6; /* 藍色：差異補丁 */
-    --color-cached: #475569; /* 灰色：快取休眠 */
-    --color-override: #f59e0b; /* 橘金：全量噴墨 */
+    --color-delta: #3b82f6; 
+    --color-cached: #475569; 
+    --color-override: #f59e0b; 
   }
 
   /* 物理防禦第一層：強制所有元素內縮邊距，絕不撐破框架 */
   * { box-sizing: border-box; }
 
+  /* 物理防禦第二層：全域鎖死 X 軸，杜絕任何向右延伸的可能性 */
   body { 
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
     background: var(--bg-dark); color: var(--text-main); 
-    margin: 0; padding: 15px; display: flex; justify-content: center; min-height: 100vh;
+    margin: 0; padding: 10px; 
+    width: 100%; max-width: 100vw; 
+    overflow-x: hidden; 
+    display: flex; justify-content: center;
   }
   
-  /* 物理防禦第二層：外框預設為上下垂直堆疊 (Mobile First) */
   .container { 
     width: 100%; max-width: 850px; 
     background: var(--panel-bg); border-radius: 12px; border: 1px solid var(--border-dim); 
     display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.6); 
   }
 
-  /* 側邊欄 (手機版預設在上方) */
+  /* 側邊欄 */
   .sidebar { 
     width: 100%; background: #0f1423; border-bottom: 1px solid var(--border-dim); 
     padding: 20px; display: flex; flex-direction: column; gap: 15px; 
@@ -46,52 +49,55 @@
   .rule-title { font-weight: bold; color: #fff; display: block; margin-bottom: 5px; }
 
   /* 右側主畫布 */
-  .main-area { flex: 1; padding: 20px; display: flex; flex-direction: column; }
+  .main-area { flex: 1; padding: 15px; display: flex; flex-direction: column; }
   
-  /* 控制列 (手機版預設換行，下拉選單獨佔一行) */
-  .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+  /* 控制列：強制上下堆疊，避免按鈕被下拉選單擠爆 */
+  .controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; width: 100%; }
+  .btn-group-row { display: flex; gap: 10px; width: 100%; }
   
+  /* 物理防禦第三層：鎮壓傲慢的下拉選單 */
   select { 
-    width: 100%; flex: 1 1 100%; /* 強制獨佔 100% 寬度 */
+    width: 100%; max-width: 100%; /* 強制最大寬度不能超過父元素 */
     padding: 12px; border-radius: 6px; background: #1e293b; color: white; 
     border: 1px solid var(--border-dim); font-size: 14px; cursor: pointer; 
-    text-overflow: ellipsis; overflow: hidden; white-space: nowrap; /* 文字過長變... */
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; /* 超出螢幕直接變 ... */
   }
   
-  .btn-run { background: #10b981; color: white; flex: 2 1 150px; padding: 12px 15px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 14px; }
+  .btn-run { background: #10b981; color: white; flex: 2; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 14px; }
   .btn-run:hover { background: #059669; }
-  .btn-reset { background: transparent; border: 1px dashed var(--text-muted); color: var(--text-muted); flex: 1 1 60px; padding: 12px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 14px; }
+  .btn-reset { background: transparent; border: 1px dashed var(--text-muted); color: var(--text-muted); flex: 1; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 14px; }
   .btn-reset:hover { border-style: solid; background: #ef4444; color: white; }
   button:disabled { opacity: 0.5; cursor: not-allowed; }
 
   /* 輸出視覺化區塊 */
-  .canvas { background: #0b0f19; border: 1px solid var(--border-dim); border-radius: 8px; padding: 20px; min-height: 250px; display: flex; flex-direction: column; gap: 10px; position: relative; }
+  .canvas { background: #0b0f19; border: 1px solid var(--border-dim); border-radius: 8px; padding: 15px; min-height: 250px; display: flex; flex-direction: column; gap: 10px; position: relative; }
   
-  .data-block { padding: 15px; background: #1e293b; border: 1px solid #334155; border-radius: 6px; font-family: monospace; font-size: 13px; color: var(--text-muted); transition: all 0.4s ease; display: flex; justify-content: space-between; }
+  /* 資料區塊：加入 flex-wrap，遇到極窄螢幕自動將標籤推到下一行 */
+  .data-block { padding: 12px; background: #1e293b; border: 1px solid #334155; border-radius: 6px; font-family: monospace; font-size: 13px; color: var(--text-muted); transition: all 0.4s ease; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
   
-  /* 動畫狀態類別 */
   .block-cached { background: #0f1423; border-color: var(--border-dim); color: #475569; opacity: 0.6; }
   .block-delta { background: rgba(59, 130, 246, 0.15); border-color: var(--color-delta); color: #93c5fd; transform: scale(1.02); box-shadow: 0 0 15px rgba(59, 130, 246, 0.3); }
   .block-override { background: rgba(245, 158, 11, 0.15); border-color: var(--color-override); color: #fcd34d; transform: scale(1.02); box-shadow: 0 0 15px rgba(245, 158, 11, 0.4); }
 
   /* 終端機模擬器 */
-  .terminal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); border-radius: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #10b981; font-family: monospace; font-size: 16px; z-index: 10; opacity: 0; pointer-events: none; transition: 0.3s; }
+  .terminal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); border-radius: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 10px; color: #10b981; font-family: monospace; font-size: 14px; z-index: 10; opacity: 0; pointer-events: none; transition: 0.3s; word-wrap: break-word; }
   .terminal-overlay.show { opacity: 1; }
 
   /* 底部狀態列 */
-  .status-bar { margin-top: auto; padding: 15px; background: #1e293b; border-radius: 8px; font-size: 13px; line-height: 1.5; color: #e2e8f0; min-height: 50px; border-left: 4px solid var(--border-dim); transition: 0.3s; }
+  .status-bar { margin-top: auto; padding: 15px; background: #1e293b; border-radius: 8px; font-size: 13px; line-height: 1.5; color: #e2e8f0; min-height: 50px; border-left: 4px solid var(--border-dim); transition: 0.3s; word-wrap: break-word; }
 
   /* =========================================
-     電腦大螢幕：恢復左右並排佈局
+     電腦大螢幕：恢復左右並排與單行按鈕佈局
   ========================================= */
   @media (min-width: 768px) {
     .container { flex-direction: row; }
-    .sidebar { width: 320px; border-right: 1px solid var(--border-dim); border-bottom: none; }
+    .sidebar { width: 300px; border-right: 1px solid var(--border-dim); border-bottom: none; }
     .main-area { padding: 25px; }
-    .controls { flex-wrap: nowrap; }
-    select { flex: 2 1 auto; width: auto; }
-    .btn-run { flex: 1; }
-    .btn-reset { flex: 0.5; }
+    
+    /* 電腦版將控制列恢復同行 */
+    .controls { flex-direction: row; }
+    select { flex: 2; width: auto; }
+    .btn-group-row { flex: 1; }
   }
 
 </style>
@@ -117,8 +123,10 @@
         <option value="A">模式 A: 差異補丁 (Delta Patch)</option>
         <option value="B">模式 B: 全量輸出特許豁免 (Manual Override)</option>
       </select>
-      <button class="btn-run" id="btn-run" onclick="runSim()">▶ 執行模擬</button>
-      <button class="btn-reset" onclick="resetSim()">🔄 重置</button>
+      <div class="btn-group-row">
+        <button class="btn-run" id="btn-run" onclick="runSim()">▶ 執行模擬</button>
+        <button class="btn-reset" onclick="resetSim()">🔄 重置</button>
+      </div>
     </div>
 
     <div class="canvas">
@@ -205,7 +213,7 @@
       blocks[2].classList.add('block-delta');
       blocks[2].querySelector('.tag').innerText = '重新輸出 (Delta)';
       
-      statusBar.innerHTML = "<b>【執行完畢】</b>僅輸出受影響區塊。有效保護 Token 資源，但可能導致上下文連貫性遺失。";
+      statusBar.innerHTML = "<b>【執行完畢】</b>僅輸出受影響區塊。保護 Token 資源，但可能遺失上下文。";
 
     } else {
       statusBar.style.borderLeftColor = 'var(--color-override)';
@@ -214,18 +222,18 @@
       terminal.classList.add('show');
       await delay(400);
       
-      const keyStr = "SUDO_OVERRIDE_KEY_ACCEPTED";
+      const keyStr = "SUDO_OVERRIDE_KEY";
       termText.innerText = "> ";
       for(let i=0; i<keyStr.length; i++) {
         termText.innerText += keyStr[i];
         await delay(50);
       }
       
-      termText.innerHTML += "<br><span style='color:#f59e0b;'>[SYSTEM] 解除快取鎖定，全量噴墨啟動...</span>";
+      termText.innerHTML += "<br><span style='color:#f59e0b;'>[SYSTEM] 解除快取，全量噴墨啟動...</span>";
       await delay(800);
       terminal.classList.remove('show');
       
-      statusBar.innerHTML = "金鑰驗證通過！系統強制燃燒算力，執行全量渲染...";
+      statusBar.innerHTML = "金鑰通過！系統強制燃燒算力，執行全量渲染...";
       
       for(let i=0; i<blocks.length; i++) {
         blocks[i].classList.add('block-override');
@@ -234,7 +242,7 @@
         await delay(200);
       }
       
-      statusBar.innerHTML = "<b>【執行完畢】</b>100% 無損傳承。物理過程完整記錄，Token 消耗最大化。";
+      statusBar.innerHTML = "<b>【執行完畢】</b>100% 無損傳承。物理過程完整記錄。";
     }
   }
 
