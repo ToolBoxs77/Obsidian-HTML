@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>全域聖典 4.0 體用合一映射矩陣 (真自適應版)</title>
+<title>全域聖典 4.0 體用合一映射矩陣 (雙重型態自適應版)</title>
 <style>
   :root {
     --bg-base: #0b0f19;
@@ -44,7 +44,9 @@
     overflow: hidden;
   }
 
-  /* 頂部：任務控制列 */
+  /* =========================================
+     頂部：任務控制列 (流體排版)
+  ========================================= */
   .header-controls {
     padding: 20px;
     background: #0f1423;
@@ -54,9 +56,9 @@
     gap: 15px;
   }
 
-  .header-title { margin: 0; font-size: 16px; color: #38bdf8; font-weight: bold; text-align: center; }
+  .header-title { margin: 0; font-size: 18px; color: #38bdf8; font-weight: bold; text-align: center; }
 
-  .btn-group { display: flex; flex-direction: column; gap: 10px; }
+  .btn-group { display: flex; flex-wrap: wrap; gap: 10px; }
   
   button {
     padding: 14px;
@@ -68,11 +70,11 @@
     background: #1e293b;
     color: var(--text-bright);
     transition: all 0.3s;
-    width: 100%;
+    flex: 1 1 200px; /* 流體按鈕：最小 200px，自動填滿 */
   }
 
-  button:hover { background: #334155; }
-  .btn-reset { background: transparent; border-style: dashed; color: var(--text-dim); }
+  button:hover { background: #334155; transform: translateY(-1px); }
+  .btn-reset { background: transparent; border-style: dashed; color: var(--text-dim); flex: 1 1 100%; }
   .btn-reset:hover { background: #ef4444; color: white; border-style: solid; border-color: #ef4444; }
 
   /* 按鈕啟動狀態 */
@@ -80,40 +82,39 @@
   .btn-cot.active { background: rgba(139, 92, 246, 0.1); border-color: var(--color-cot); color: #c4b5fd; box-shadow: 0 0 10px rgba(139, 92, 246, 0.2); }
   .btn-git.active { background: rgba(16, 185, 129, 0.1); border-color: var(--color-git); color: var(--color-git); box-shadow: 0 0 10px rgba(16, 185, 129, 0.2); }
 
-  /* 中央：矩陣視圖 (預設為手機卡片版) */
-  .matrix-area { padding: 20px; }
+  /* =========================================
+     中央：矩陣視圖 (預設為手機端卡片型態)
+  ========================================= */
+  .matrix-area { padding: 20px; display: flex; flex-direction: column; gap: 20px; }
   
-  /* 隱藏桌機版的頂部 X 軸 */
-  .matrix-header-row { display: none; }
+  /* 手機版隱藏全域 X 軸標頭 */
+  .desktop-header-row { display: none; }
 
-  /* Y 軸列：手機版變為卡片外框 */
-  .matrix-row {
+  /* Y 軸列：手機版化身為實體卡片 */
+  .matrix-card {
     background: #111827;
     border: 1px solid var(--border-dim);
-    border-radius: 10px;
-    margin-bottom: 15px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
   }
 
-  /* Y 軸標題：手機版變為卡片標題 */
-  .header-y {
-    background: #1e293b;
-    padding: 12px;
-    font-size: 14px;
+  /* Y 軸標題：手機版化身為卡片標題 */
+  .row-header {
+    font-size: 15px;
     font-weight: bold;
-    color: #cbd5e1;
+    color: var(--text-bright);
     text-align: center;
-    border-bottom: 1px solid var(--border-dim);
+    border-bottom: 1px dashed var(--border-dim);
+    padding-bottom: 12px;
+    margin-bottom: 15px;
   }
 
-  /* 資料格容器：手機版為雙欄網格 */
+  /* 資料格容器：手機版為雙欄排版 */
   .cells-wrapper {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-    padding: 12px;
+    gap: 10px;
   }
 
   /* 矩陣交叉點 (Cell) */
@@ -128,12 +129,13 @@
     justify-content: center;
     font-size: 12px;
     color: #334155;
-    transition: all 0.4s;
+    transition: all 0.3s;
     position: relative;
+    min-height: 70px;
   }
   
-  /* 手機版專屬 X 軸標籤 (內嵌於 Cell 中) */
-  .mobile-x-label { font-size: 11px; color: var(--text-dim); margin-bottom: 5px; text-align: center; }
+  /* 手機版專屬的內建 X 軸標籤 */
+  .mobile-x-label { font-size: 12px; color: #94a3b8; margin-bottom: 6px; font-weight: bold; letter-spacing: 1px; }
   .cell-status { font-size: 11px; margin-top: 4px; opacity: 0.7; }
   .cell-content { display: flex; flex-direction: column; align-items: center; }
 
@@ -164,26 +166,25 @@
   }
 
   .explanation-title { margin: 0 0 10px 0; font-size: 14px; color: var(--text-bright); display: flex; align-items: center; gap: 8px; }
-  .explanation-text { margin: 0; font-size: 13px; line-height: 1.6; color: #cbd5e1; }
+  .explanation-text { margin: 0; font-size: 14px; line-height: 1.6; color: #cbd5e1; }
 
   /* =========================================
-     電腦與平板自適應 (>= 768px 時變回 3x6 矩陣) 
+     降維打擊魔法：電腦版恢復 3x6 網格 
   ========================================= */
-  @media (min-width: 768px) {
-    .header-title { font-size: 18px; text-align: left; }
-    .btn-group { flex-direction: row; }
-    button { flex: 1; }
-    .btn-reset { flex: 0.5; }
+  @media (min-width: 800px) {
+    .header-title { text-align: left; }
+    .btn-reset { flex: 0 1 150px; } /* 電腦版讓重置按鈕變小靠右 */
     
-    .matrix-area { padding: 30px 25px; }
-
-    /* 顯示桌機版 X 軸 */
-    .matrix-header-row {
-      display: grid;
-      grid-template-columns: 140px repeat(6, 1fr);
-      gap: 10px;
-      margin-bottom: 10px;
+    /* 啟動網格系統 */
+    .matrix-area { 
+      display: grid; 
+      grid-template-columns: 140px repeat(6, 1fr); 
+      gap: 10px; 
+      padding: 30px 25px; 
     }
+
+    /* 顯示全域 X 軸標頭，並解除外框封印 */
+    .desktop-header-row { display: contents; }
     .header-corner { display: block; }
     .header-x {
       display: flex; align-items: center; justify-content: center;
@@ -191,38 +192,22 @@
       border-bottom: 1px solid var(--border-dim); padding-bottom: 10px;
     }
 
-    /* Y 軸列：取消卡片外觀，變成網格列 */
-    .matrix-row {
-      display: grid;
-      grid-template-columns: 140px 1fr;
-      background: transparent;
-      border: none;
-      margin-bottom: 15px;
+    /* 終極黑魔法 display: contents 
+       這會將卡片「隱形」，讓裡面的子元素直接受外層的 Grid 管轄！ */
+    .matrix-card { display: contents; }
+    .cells-wrapper { display: contents; }
+
+    /* 卡片標題變回 Y 軸側邊標題 */
+    .row-header {
+      display: flex; align-items: center; justify-content: flex-end;
+      padding-right: 15px; margin: 0;
+      border-bottom: none; border-right: 1px solid var(--border-dim);
+      text-align: right; font-size: 14px; color: var(--text-dim);
     }
 
-    /* Y 軸標題：靠右對齊 */
-    .header-y {
-      background: transparent;
-      text-align: right;
-      padding-right: 15px;
-      border-bottom: none;
-      border-right: 1px solid var(--border-dim);
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-    }
-
-    /* 資料格容器：變成 6 欄平排 */
-    .cells-wrapper {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 10px;
-      padding: 0 0 0 10px;
-    }
-
-    /* 隱藏內嵌的 X 軸標籤 */
+    /* 隱藏手機版專用內嵌標籤 */
     .mobile-x-label { display: none; }
-    .cell { padding: 10px; }
+    .cell { padding: 10px; min-height: 60px; }
   }
 </style>
 </head>
@@ -239,8 +224,7 @@
     </div>
   </div>
 
-  <div class="matrix-area" id="grid">
-    </div>
+  <div class="matrix-area" id="grid"></div>
 
   <div class="explanation-area" id="exp-box">
     <h3 class="explanation-title">📍 動態物理執行路徑解說</h3>
@@ -291,13 +275,13 @@
 
   const grid = document.getElementById('grid');
 
-  // 動態構建高適應性 DOM 結構
+  // 動態構建具備「雙重物理型態」的 DOM 結構
   function renderGrid() {
     grid.innerHTML = '';
 
-    // 1. 構建桌機版頂部 X 軸 (手機版會用 CSS 隱藏)
+    // 1. 構建桌機版全域 X 軸 (手機版隱藏)
     const headerRow = document.createElement('div');
-    headerRow.className = 'matrix-header-row';
+    headerRow.className = 'desktop-header-row';
     headerRow.innerHTML = `<div class="header-corner"></div>`;
     useX.forEach(x => {
       const xLabel = document.createElement('div');
@@ -307,16 +291,16 @@
     });
     grid.appendChild(headerRow);
 
-    // 2. 構建 Y 軸資料列 (手機版會變成獨立卡片)
+    // 2. 構建 Y 軸資料 (手機版為卡片，桌機版被 display:contents 攤平為 Grid Row)
     bodyY.forEach(y => {
-      const row = document.createElement('div');
-      row.className = 'matrix-row';
+      const card = document.createElement('div');
+      card.className = 'matrix-card';
       
-      // Y 軸標題
+      // 卡片標題 / 桌機 Y 軸標題
       const yLabel = document.createElement('div');
-      yLabel.className = 'header-y';
+      yLabel.className = 'row-header';
       yLabel.innerText = y.name;
-      row.appendChild(yLabel);
+      card.appendChild(yLabel);
 
       // 該列的資料格容器
       const cellsWrapper = document.createElement('div');
@@ -327,7 +311,7 @@
         cell.className = 'cell';
         cell.id = `cell-${y.id}-${x.id}`;
         
-        // 內嵌手機版專用的 X 軸標籤
+        // 內嵌手機版專用的 X 軸標籤 (桌機版隱藏)
         cell.innerHTML = `
           <div class="mobile-x-label">${x.name}</div>
           <div class="cell-content">
@@ -338,8 +322,8 @@
         cellsWrapper.appendChild(cell);
       });
 
-      row.appendChild(cellsWrapper);
-      grid.appendChild(row);
+      card.appendChild(cellsWrapper);
+      grid.appendChild(card);
     });
   }
 
@@ -369,7 +353,7 @@
       const cell = document.getElementById(`cell-${coord}`);
       if (cell) {
         cell.classList.add(data.colorClass);
-        cell.querySelector('.cell-content').innerHTML = `<span>活躍</span><span class="cell-status">Active</span>`;
+        cell.querySelector('.cell-content').innerHTML = `<span style="color:currentColor;">活躍</span><span class="cell-status" style="color:currentColor;">Active</span>`;
       }
     });
 
