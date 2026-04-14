@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>全域聖典 4.0 體用合一動態映射圖 (真自適應版)</title>
+<title>全域聖典 4.0 體用合一動態映射圖 (防腰斬自適應版)</title>
 <style>
   :root {
     --bg-dark: #070a13;
@@ -13,16 +13,15 @@
     --text-muted: #64748b;
     
     /* 體 (物理層) 顏色 */
-    --color-body-a: #10b981; /* S24 綠 */
-    --color-body-b: #f59e0b; /* 母艦 橘 */
-    --color-body-c: #3b82f6; /* 雲端 藍 */
+    --color-body-a: #10b981;
+    --color-body-b: #f59e0b;
+    --color-body-c: #3b82f6;
     
     /* 用 (公路層) 顏色 */
-    --color-func-c: #8b5cf6; /* 思維 紫 */
-    --color-func-d: #ec4899; /* 執行 粉 */
+    --color-func-c: #8b5cf6;
+    --color-func-d: #ec4899;
   }
 
-  /* 全局防破版 */
   * { box-sizing: border-box; }
 
   body {
@@ -37,7 +36,7 @@
     padding: 15px;
   }
 
-  /* 外框改為流體高度 */
+  /* 外框改為流體高度，不再強制限制 */
   .container {
     width: 100%;
     max-width: 1000px;
@@ -58,20 +57,20 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    flex-wrap: wrap; /* 手機版防文字切斷 */
+    flex-wrap: wrap; 
     gap: 10px;
   }
   .header-title { font-size: 15px; font-weight: bold; color: #38bdf8; display: flex; align-items: center; gap: 8px; }
   .header-sub { font-size: 11px; color: var(--text-muted); font-family: monospace; }
 
-  /* 佈局切分：預設為手機版垂直堆疊 */
+  /* 佈局切分 */
   .main-layout { 
     display: flex; 
     flex-direction: column; 
     height: auto; 
   }
 
-  /* 左側/上方：技術規範側邊欄 */
+  /* 左側/上方：側邊欄 */
   .sidebar {
     width: 100%;
     background: #0f172a;
@@ -83,29 +82,28 @@
     z-index: 20;
   }
   
-  .sidebar h3 { margin: 0; font-size: 15px; color: var(--text-main); border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+  /* 標題與按鈕區加入 flex-shrink: 0，防止被壓縮 */
+  .sidebar h3 { margin: 0; font-size: 15px; color: var(--text-main); border-bottom: 1px solid var(--border-color); padding-bottom: 10px; flex-shrink: 0; }
+  .controls { display: flex; gap: 10px; flex-shrink: 0; margin-top: auto; }
   
-  .timeline { display: flex; flex-direction: column; gap: 15px; margin: 0; padding: 0; list-style: none; }
+  /* 時間軸區塊加入內部滾動條，防禦內容過多 */
+  .timeline { 
+    display: flex; flex-direction: column; gap: 15px; 
+    margin: 0; padding: 0 5px 0 0; list-style: none; 
+    flex: 1; overflow-y: auto; 
+  }
+  /* 美化捲軸 */
+  .timeline::-webkit-scrollbar { width: 6px; }
+  .timeline::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
   .step-card {
-    background: #1e293b;
-    padding: 15px;
-    border-radius: 8px;
-    border-left: 3px solid #334155;
-    font-size: 13px;
-    line-height: 1.6;
-    color: #94a3b8;
-    transition: all 0.4s ease;
-    opacity: 0.5;
+    background: #1e293b; padding: 15px; border-radius: 8px; border-left: 3px solid #334155;
+    font-size: 13px; line-height: 1.6; color: #94a3b8; transition: all 0.4s ease; opacity: 0.5;
   }
   .step-card.active {
-    background: #2d3748;
-    color: #fff;
-    opacity: 1;
-    transform: translateX(5px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    background: #2d3748; color: #fff; opacity: 1; transform: translateX(5px); box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   }
   
-  .controls { display: flex; gap: 10px; }
   button { padding: 14px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; flex: 1; transition: 0.2s; display: flex; justify-content: center; align-items: center; }
   .btn-start { background: var(--color-body-b); color: #000; }
   .btn-start:hover { background: #d97706; }
@@ -116,76 +114,59 @@
   /* 右側/下方：動態畫布區 */
   .canvas {
     width: 100%;
-    min-height: 450px; /* 手機版確保有足夠高度 */
+    min-height: 480px; 
     position: relative;
     background: #070a13;
     overflow: hidden;
     padding: 20px;
+    flex: 1;
   }
 
-  /* 維度切分線與標籤 */
   .dimension-divider {
     position: absolute; top: 50%; left: 0; width: 100%; height: 2px;
-    background: repeating-linear-gradient(90deg, #1f2937, #1f2937 10px, transparent 10px, transparent 20px);
-    z-index: 1;
+    background: repeating-linear-gradient(90deg, #1f2937, #1f2937 10px, transparent 10px, transparent 20px); z-index: 1;
   }
   .dim-label { position: absolute; font-size: 11px; font-weight: bold; letter-spacing: 1px; padding: 4px 8px; border-radius: 6px; z-index: 2; }
   .label-body { top: 10px; left: 10px; background: rgba(16, 185, 129, 0.1); color: var(--color-body-a); border: 1px solid var(--color-body-a); }
   .label-func { bottom: 10px; left: 10px; background: rgba(139, 92, 246, 0.1); color: var(--color-func-c); border: 1px solid var(--color-func-c); }
 
-  /* 節點通用樣式 */
   .node {
-    position: absolute;
-    padding: 10px;
-    border-radius: 8px;
-    background: #111827;
-    border: 2px solid #334155;
-    text-align: center;
-    font-weight: bold;
-    font-size: 12px;
-    z-index: 5;
-    transition: all 0.3s;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-    display: flex; flex-direction: column; justify-content: center;
+    position: absolute; padding: 10px; border-radius: 8px; background: #111827; border: 2px solid #334155;
+    text-align: center; font-weight: bold; font-size: 12px; z-index: 5; transition: all 0.3s;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5); display: flex; flex-direction: column; justify-content: center;
   }
   .node small { font-size: 10px; color: var(--text-muted); margin-top: 4px; font-weight: normal; }
   
-  /* 【體】層級節點 (手機版：使用百分比固定於四角) */
   #node-body-a { top: 15%; left: 5%; width: 42%; border-color: var(--color-body-a); }
   #node-body-b { top: 15%; right: 5%; width: 42%; border-color: var(--color-body-b); }
-  
-  /* 【用】層級節點 (手機版：使用百分比固定於四角) */
   #node-func-d { bottom: 15%; left: 5%; width: 42%; border-color: var(--color-func-d); border-style: dashed; }
   #node-func-c { bottom: 15%; right: 5%; width: 42%; border-color: var(--color-func-c); border-style: dashed; }
 
-  /* SVG 動態連線 */
   svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
   .path-line { stroke: #1f2937; stroke-width: 3; stroke-dasharray: 6,6; fill: none; transition: all 0.3s; }
   .path-active { stroke: #fff; stroke-dasharray: none; filter: drop-shadow(0 0 8px rgba(255,255,255,0.8)); }
 
-  /* 連線文字標籤 */
   .path-tag { position: absolute; font-size: 10px; color: #94a3b8; background: #070a13; padding: 2px 6px; z-index: 3; border-radius: 4px; border: 1px solid #1f2937; text-align: center; transform: translate(-50%, -50%); }
   
-  /* 發光封包 */
   #packet {
     position: absolute; width: 14px; height: 14px; background: white; border-radius: 50%;
     box-shadow: 0 0 15px white, 0 0 30px white; z-index: 10; display: none;
     margin-top: -7px; margin-left: -7px;
   }
 
-  /* 發光動畫 */
   .glow-a { box-shadow: 0 0 20px var(--color-body-a); transform: scale(1.05); border-color: var(--color-body-a) !important; color: #fff; }
   .glow-b { box-shadow: 0 0 20px var(--color-body-b); transform: scale(1.05); border-color: var(--color-body-b) !important; color: #fff; }
   .glow-c { box-shadow: 0 0 20px var(--color-func-c); transform: scale(1.05); border-color: var(--color-func-c) !important; color: #fff; border-style: solid !important; }
   .glow-d { box-shadow: 0 0 20px var(--color-func-d); transform: scale(1.05); border-color: var(--color-func-d) !important; color: #fff; border-style: solid !important; }
 
   /* =========================================
-     電腦與平板自適應 (大於 768px 時恢復左右排列與絕對像素) 
+     電腦與平板自適應 (大於 768px 時恢復左右排列) 
   ========================================= */
   @media (min-width: 768px) {
-    .main-layout { flex-direction: row; height: 600px; }
+    /* 關鍵修復：改為 min-height，讓它能隨內容自動撐高 */
+    .main-layout { flex-direction: row; min-height: 650px; height: auto; align-items: stretch; }
     .sidebar { width: 320px; border-right: 1px solid var(--border-color); border-bottom: none; }
-    .canvas { flex: 1; height: 100%; min-height: unset; padding: 0; }
+    .canvas { height: auto; min-height: unset; padding: 0; }
     
     .header-title { font-size: 16px; }
     .header-sub { font-size: 12px; }
@@ -194,13 +175,11 @@
     .label-body { top: 20px; left: 20px; }
     .label-func { bottom: 20px; left: 20px; }
 
-    /* 電腦版：恢復原始架構的不對稱設計感 */
     .node { font-size: 14px; padding: 15px 20px; width: auto; }
     .node small { font-size: 11px; }
     
     #node-body-a { top: 80px; left: 80px; width: auto; }
     #node-body-b { top: 80px; left: auto; right: 80px; width: 140px; }
-    
     #node-func-c { bottom: 80px; left: auto; right: 80px; width: auto; }
     #node-func-d { bottom: 80px; right: auto; left: 180px; width: auto; }
 
@@ -213,7 +192,7 @@
 <div class="container">
   <div class="header">
     <div class="header-title">🛡️ 當前任務流：CAO 專利侵權判定 (FTO)</div>
-    <div class="header-sub">STATUS: IDLE | DIMENSION: CROSS-LAYER</div>
+    <div class="header-sub">STATUS: IDLE | DIMENSION: 2D</div>
   </div>
 
   <div class="main-layout">
@@ -240,7 +219,7 @@
       
       <div class="controls">
         <button id="btn-start" class="btn-start" onclick="startFlow()">啟動任務流</button>
-        <button class="btn-reset" onclick="resetSim()">🔄 重置</button>
+        <button class="btn-reset" onclick="resetSim()">🔄</button>
       </div>
     </div>
 
@@ -259,19 +238,10 @@
       <div class="path-tag" id="tag-tunnel">Tailscale 隧道</div>
       <div class="path-tag" id="tag-sync">Git Sync</div>
 
-      <div class="node" id="node-body-a">
-        工作流 A<br><small>(S24 / Obsidian)</small>
-      </div>
-      <div class="node" id="node-body-b">
-        工作流 B<br><small>(128GB 母艦 / RAG)</small>
-      </div>
-      
-      <div class="node" id="node-func-c">
-        公路 C<br><small>(思維推演 / Dify)</small>
-      </div>
-      <div class="node" id="node-func-d">
-        公路 D<br><small>(執行寫回 / 同步)</small>
-      </div>
+      <div class="node" id="node-body-a">工作流 A<br><small>(S24 / Obsidian)</small></div>
+      <div class="node" id="node-body-b">工作流 B<br><small>(128GB 母艦 / RAG)</small></div>
+      <div class="node" id="node-func-c">公路 C<br><small>(思維推演 / Dify)</small></div>
+      <div class="node" id="node-func-d">公路 D<br><small>(執行寫回 / 同步)</small></div>
 
       <div id="packet"></div>
     </div>
@@ -279,7 +249,6 @@
 </div>
 
 <script>
-  // DOM 元素擷取
   const btnStart = document.getElementById('btn-start');
   const packet = document.getElementById('packet');
   const canvasArea = document.getElementById('canvas-area');
@@ -304,7 +273,6 @@
     document.getElementById('step-4')
   ];
 
-  // 計算中心點座標
   function getCenter(el) {
     const rect = el.getBoundingClientRect();
     const canvasRect = canvasArea.getBoundingClientRect();
@@ -314,34 +282,27 @@
     };
   }
 
-  // 動態繪製 SVG 連線與標籤位置
   function drawLayout() {
     const pA = getCenter(nBodyA);
     const pB = getCenter(nBodyB);
     const pC = getCenter(nFuncC);
     const pD = getCenter(nFuncD);
 
-    // 畫線
     path1.setAttribute('d', `M ${pA.x} ${pA.y} L ${pB.x} ${pB.y}`);
     path2.setAttribute('d', `M ${pB.x} ${pB.y} L ${pC.x} ${pC.y}`);
     path3.setAttribute('d', `M ${pC.x} ${pC.y} L ${pD.x} ${pD.y}`);
     path4.setAttribute('d', `M ${pD.x} ${pD.y} L ${pA.x} ${pA.y}`);
 
-    // 定位標籤：電腦版與手機版的微調
     const isMobile = window.innerWidth < 768;
-
     if (isMobile) {
       tagTunnel.style.left = ((pA.x + pB.x) / 2) + 'px';
       tagTunnel.style.top = (pA.y - 30) + 'px';
-      
       tagSync.style.left = ((pD.x + pA.x) / 2) + 'px';
       tagSync.style.top = ((pD.y + pA.y) / 2) + 'px';
     } else {
-      // 電腦版保持原本的像素偏移
       tagTunnel.style.left = ((pA.x + pB.x) / 2 - 40) + 'px';
       tagTunnel.style.top = (pA.y - 25) + 'px';
       tagTunnel.style.transform = 'none';
-      
       tagSync.style.left = ((pD.x + pA.x) / 2 - 30) + 'px';
       tagSync.style.top = ((pD.y + pA.y) / 2) + 'px';
       tagSync.style.transform = 'none';
@@ -350,31 +311,26 @@
 
   window.addEventListener('resize', () => { setTimeout(drawLayout, 50); });
 
-  // 系統重置
   function resetSim() {
     drawLayout(); 
     packet.style.display = 'none';
     packet.style.transition = 'none';
     btnStart.disabled = false;
-    document.querySelector('.header-sub').innerText = "STATUS: IDLE | DIMENSION: CROSS-LAYER";
+    document.querySelector('.header-sub').innerText = "STATUS: IDLE | DIMENSION: 2D";
     
-    // 清除發光狀態
     nBodyA.classList.remove('glow-a');
     nBodyB.classList.remove('glow-b');
     nFuncC.classList.remove('glow-c');
     nFuncD.classList.remove('glow-d');
     
-    // 清除線條狀態
     [path1, path2, path3, path4].forEach(p => p.classList.remove('path-active'));
     
-    // 清除文字高亮
     steps.forEach(s => {
       s.classList.remove('active');
       s.style.borderColor = '#334155';
     });
   }
 
-  // 封包移動動畫 (支援非同步等待)
   async function movePacket(startEl, endEl, duration, color, pathEl) {
     const pStart = getCenter(startEl);
     const pEnd = getCenter(endEl);
@@ -401,52 +357,38 @@
     pathEl.style.stroke = '';
   }
 
-  // 啟動主流程
   async function startFlow() {
     resetSim();
     btnStart.disabled = true;
     document.querySelector('.header-sub').innerText = "STATUS: EXECUTING | DIMENSION: CROSS-LAYER";
 
-    // --- STEP 1: 體 -> 體 ---
     steps[0].classList.add('active');
     steps[0].style.borderColor = 'var(--color-body-a)';
     nBodyA.classList.add('glow-a');
-    
     await movePacket(nBodyA, nBodyB, 1.2, 'var(--color-body-a)', path1);
-    
     nBodyA.classList.remove('glow-a');
     steps[0].classList.remove('active');
 
-    // --- STEP 2: 體 ↓ 用 ---
     steps[1].classList.add('active');
     steps[1].style.borderColor = 'var(--color-body-b)';
     nBodyB.classList.add('glow-b');
-    
     await movePacket(nBodyB, nFuncC, 0.8, 'var(--color-body-b)', path2);
-    
     nBodyB.classList.remove('glow-b');
     steps[1].classList.remove('active');
 
-    // --- STEP 3: 用 -> 用 (思維運算) ---
     steps[2].classList.add('active');
     steps[2].style.borderColor = 'var(--color-func-c)';
     nFuncC.classList.add('glow-c');
     packet.style.display = 'none'; 
-    
     await new Promise(r => setTimeout(r, 1500)); 
-    
     await movePacket(nFuncC, nFuncD, 1.0, 'var(--color-func-c)', path3);
-    
     nFuncC.classList.remove('glow-c');
     steps[2].classList.remove('active');
 
-    // --- STEP 4: 用 ↑ 體 ---
     steps[3].classList.add('active');
     steps[3].style.borderColor = 'var(--color-func-d)';
     nFuncD.classList.add('glow-d');
-    
     await movePacket(nFuncD, nBodyA, 1.2, 'var(--color-func-d)', path4);
-    
     nFuncD.classList.remove('glow-d');
     nBodyA.classList.add('glow-a'); 
     packet.style.display = 'none';
@@ -456,9 +398,7 @@
     btnStart.disabled = false;
   }
 
-  // 初始繪製 (延遲增加確保排版穩定)
   setTimeout(resetSim, 150);
-
 </script>
 </body>
 </html>
