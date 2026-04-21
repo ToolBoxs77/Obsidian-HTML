@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CAD 精確校準：管槽無損裝載拓樸模擬器</title>
+<style>
+  :root {
+    --bg-dark: #0f172a;
+    --panel-bg: #1e293b;
+    --border: #334155;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    
+    --color-green: #10b981; /* 完美裝載 */
+    --color-yellow: #f59e0b; /* 極限裝載 */
+    --color-red: #ef4444; /* 空間崩潰 */
+    --color-duct: #38bdf8; /* 管槽顏色 */
+    --color-pipe: #8b5cf6; /* 管線顏色 */
+  }
+
+  * { box-sizing: border-box; }
+
+  body { 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+    background: var(--bg-dark); color: var(--text-main); 
+    margin: 0; padding: 15px; 
+    display: flex; justify-content: center; min-height: 100vh;
+  }
+  
+  .container { 
+    width: 100%; max-width: 850px; 
+    background: var(--panel-bg); border-radius: 12px; border: 1px solid var(--border); 
+    display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.6); 
+  }
+
+  /* 頂部標題與控制列 */
+  .header { padding: 20px; background: #18212f; border-bottom: 1px solid var(--border); }
+  .header h2 { margin: 0 0 15px 0; font-size: 18px; color: var(--color-duct); display: flex; align-items: center; gap: 8px; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 15px; }
+  .input-group { display: flex; flex-direction: column; gap: 8px; flex: 1 1 250px; }
+  .input-group label { font-size: 13px; font-weight: bold; color: var(--text-muted); }
+  
+  select { 
+    width: 100%; padding: 12px; border-radius: 6px; background: #0f172a; color: white; 
+    border: 1px solid #475569; font-size: 14px; cursor: pointer; outline: none; transition: 0.3s;
+  }
+  select:hover { border-color: var(--color-duct); }
+
+  /* 畫布區 (自適應 SVG) */
+  .canvas-container { 
+    padding: 20px; background: #0b0f19; display: flex; justify-content: center; 
+    align-items: center; min-height: 350px; position: relative;
+    background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  svg { width: 100%; max-height: 400px; overflow: visible; }
+
+  /* SVG 元素樣式與動畫 */
+  .duct-path { fill: rgba(56, 189, 248, 0.05); stroke: var(--color-duct); stroke-width: 3; transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+  .pipe-circle { fill: rgba(139, 92, 246, 0.2); stroke: var(--color-pipe); stroke-width: 2; transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+  .dim-line { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 4,4; transition: all 0.5s; }
+  .dim-text { fill: var(--text-main); font-size: 10px; font-weight: bold; font-family: monospace; text-anchor: middle; transition: all 0.5s; }
+
+  /* 狀態判定列 */
+  .status-bar { padding: 20px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; transition: all 0.3s; }
+  .status-title { font-size: 18px; font-weight: bold; margin: 0; display: flex; align-items: center; gap: 8px; }
+  .status-desc { font-size: 14px; margin: 0; opacity: 0.9; line-height: 1.5; }
+  .status-metrics { font-size: 13px; font-family: monospace; color: var(--text-muted); margin-top: 5px; padding-top: 10px; border-top: 1px dashed #334155; }
+
+  /* 狀態顏色切換 */
+  .status-green { background: rgba(16, 185, 129, 0.1); border-left: 6px solid var(--color-green); }
+  .status-green .status-title { color: var(--color-green); }
+  
+  .status-yellow { background: rgba(245, 158, 11, 0.1); border-left: 6px solid var(--color-yellow); }
+  .status-yellow .status-title { color: var(--color-yellow); }
+  
+  .status-red { background: rgba(239, 68, 68, 0.1); border-left: 6px solid var(--color-red); }
+  .status-red .status-title { color: var(--color-red); }
+  .status-red .duct-path { stroke: var(--color-red); fill: rgba(239, 68, 68, 0.05); }
+  .status-red .pipe-circle { stroke: var(--color-red); }
+
+  @media (min-width: 768px) {
+    .controls { flex-direction: row; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h2>🛠️ CAD 精確校準：管槽無損裝載拓樸模擬器</h2>
+    <div class="controls">
+      <div class="input-group">
+        <label>1. 切換管槽規格 (Duct Size)</label>
+        <select id="duct-select" onchange="updateSimulation()">
+          <option value="80">SD-80 (寬 75mm x 深 65mm)</option>
+          <option value="100">SD-100 (寬 100mm x 深 70mm)</option>
+          <option value="120">SD-120 (寬 122mm x 深 75mm)</option>
+          <option value="140">SD-140 (寬 140mm x 深 80mm)</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label>2. 選擇佈線情境 (Topology)</label>
+        <select id="pipe-select" onchange="updateSimulation()">
+          <option value="1">單組 23管 (寬 48mm)</option>
+          <option value="2">單組 24管 (寬 58mm)</option>
+          <option value="3">兩組 23管 (寬 96mm)</option>
+          <option value="4">三組 23管 (谷地疊放)</option>
+          <option value="5">兩組 23管 + 一組 24管 (谷地疊放)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="canvas-container">
+    <svg viewBox="-90 -120 180 150" id="cad-svg">
+      <line id="dim-w-line" class="dim-line" />
+      <text id="dim-w-text" class="dim-text" dy="-3"></text>
+      
+      <line id="dim-h-line" class="dim-line" />
+      <text id="dim-h-text" class="dim-text" dx="5" dy="3" transform=""></text>
+
+      <path id="duct-shape" class="duct-path" d="" />
+
+      <circle id="pipe-1" class="pipe-circle" cx="0" cy="0" r="0" opacity="0" />
+      <circle id="pipe-2" class="pipe-circle" cx="0" cy="0" r="0" opacity="0" />
+      <circle id="pipe-3" class="pipe-circle" cx="0" cy="0" r="0" opacity="0" />
+    </svg>
+  </div>
+
+  <div id="status-bar" class="status-bar status-green">
+    <h3 id="status-title" class="status-title">✅ 完美裝載：具備排水與散熱餘裕</h3>
+    <p id="status-desc" class="status-desc">幾何干涉檢查通過。空間充裕，符合物理安全規範。</p>
+    <div id="status-metrics" class="status-metrics">管槽內寬: 75mm | 物件總寬: 48mm | 剩餘空間: 27mm</div>
+  </div>
+</div>
+
+<script>
+  // 管槽規格資料庫 (CAD 尺寸)
+  const ductDB = {
+    "80":  { w: 75,  h: 65 },
+    "100": { w: 100, h: 70 },
+    "120": { w: 122, h: 75 },
+    "140": { w: 140, h: 80 }
+  };
+
+  // DOM 元素
+  const ductSelect = document.getElementById('duct-select');
+  const pipeSelect = document.getElementById('pipe-select');
+  const ductShape = document.getElementById('duct-shape');
+  
+  const p1 = document.getElementById('pipe-1');
+  const p2 = document.getElementById('pipe-2');
+  const p3 = document.getElementById('pipe-3');
+  
+  const dimWLine = document.getElementById('dim-w-line');
+  const dimWText = document.getElementById('dim-w-text');
+  const dimHLine = document.getElementById('dim-h-line');
+  const dimHText = document.getElementById('dim-h-text');
+
+  const statusBar = document.getElementById('status-bar');
+  const statusTitle = document.getElementById('status-title');
+  const statusDesc = document.getElementById('status-desc');
+  const statusMetrics = document.getElementById('status-metrics');
+
+  // 設置圓形參數的輔助函數
+  function setCircle(el, cx, cy, r, show) {
+    el.setAttribute('cx', cx);
+    el.setAttribute('cy', cy);
+    el.setAttribute('r', r);
+    el.setAttribute('opacity', show ? "1" : "0");
+  }
+
+  // 核心幾何與物理更新邏輯
+  function updateSimulation() {
+    const duct = ductDB[ductSelect.value];
+    const mode = pipeSelect.value;
+
+    // 1. 繪製管槽 (U 型)
+    const halfW = duct.w / 2;
+    // SVG 路徑：從左上，到左下，到右下，到右上
+    ductShape.setAttribute('d', `M -${halfW},-${duct.h} L -${halfW},0 L ${halfW},0 L ${halfW},-${duct.h}`);
+
+    // 標註線更新
+    dimWLine.setAttribute('x1', -halfW); dimWLine.setAttribute('y1', -duct.h - 10);
+    dimWLine.setAttribute('x2', halfW);  dimWLine.setAttribute('y2', -duct.h - 10);
+    dimWText.setAttribute('x', 0);       dimWText.setAttribute('y', -duct.h - 12);
+    dimWText.textContent = `內淨寬 B: ${duct.w}mm`;
+
+    dimHLine.setAttribute('x1', halfW + 10); dimHLine.setAttribute('y1', 0);
+    dimHLine.setAttribute('x2', halfW + 10); dimHLine.setAttribute('y2', -duct.h);
+    dimHText.setAttribute('x', halfW + 15);  dimHText.setAttribute('y', -duct.h / 2);
+    dimHText.textContent = `淨深 A: ${duct.h}mm`;
+
+    // 2. 計算管線拓樸 (畢氏定理疊放計算)
+    let totalW = 0;
+    let totalH = 0;
+
+    if (mode === "1") {
+      // 單組 23管 (R=24)
+      setCircle(p1, 0, -24, 24, true);
+      setCircle(p2, 0, 0, 0, false);
+      setCircle(p3, 0, 0, 0, false);
+      totalW = 48; totalH = 48;
+    } 
+    else if (mode === "2") {
+      // 單組 24管 (R=29)
+      setCircle(p1, 0, -29, 29, true);
+      setCircle(p2, 0, 0, 0, false);
+      setCircle(p3, 0, 0, 0, false);
+      totalW = 58; totalH = 58;
+    } 
+    else if (mode === "3") {
+      // 兩組 23管並排 (R=24)
+      setCircle(p1, -24, -24, 24, true);
+      setCircle(p2, 24, -24, 24, true);
+      setCircle(p3, 0, 0, 0, false);
+      totalW = 96; totalH = 48;
+    } 
+    else if (mode === "4") {
+      // 三組 23管 (谷地疊放)
+      // 底層兩顆距離 48，半徑皆 24。頂層半徑 24。
+      // 畢氏定理：斜邊=48，底邊=24 => 高度差 = sqrt(48^2 - 24^2) = 41.569
+      const hDiff = 41.57;
+      setCircle(p1, -24, -24, 24, true);
+      setCircle(p2, 24, -24, 24, true);
+      setCircle(p3, 0, -24 - hDiff, 24, true);
+      totalW = 96; totalH = 24 + hDiff + 24; // 89.57
+    } 
+    else if (mode === "5") {
+      // 兩組 23管 + 一組 24管 (谷地疊放)
+      // 頂層半徑 29。斜邊 = 24+29 = 53。底邊 = 24。
+      // 畢氏定理：高度差 = sqrt(53^2 - 24^2) = sqrt(2809 - 576) = 47.25
+      const hDiff = 47.25;
+      setCircle(p1, -24, -24, 24, true);
+      setCircle(p2, 24, -24, 24, true);
+      setCircle(p3, 0, -24 - hDiff, 29, true);
+      totalW = 96; totalH = 24 + hDiff + 29; // 100.25
+    }
+
+    // 3. 判定系統 (空間審查)
+    totalH = Math.round(totalH * 10) / 10; // 取小數第一位
+    const remainW = duct.w - totalW;
+    const remainH = duct.h - totalH;
+
+    // 重置樣式
+    statusBar.className = 'status-bar';
+    
+    if (remainW < 0 || remainH < 0) {
+      // 空間崩潰 (紅)
+      statusBar.classList.add('status-red');
+      statusTitle.innerHTML = '❌ 空間崩潰：幾何干涉';
+      statusDesc.innerHTML = '警告！物件總寬度或總高度已超越管槽物理極限，無法裝載。';
+    } 
+    else if (remainW < 10) {
+      // 極限裝載 (黃)
+      statusBar.classList.add('status-yellow');
+      statusTitle.innerHTML = '⚠️ 極限裝載：可容納，但過彎需注意應力';
+      statusDesc.innerHTML = '幾何干涉通過，但剩餘寬度小於 10mm。直線佈設可行，若有轉角需評估管材硬度與彎曲半徑。';
+    } 
+    else {
+      // 完美裝載 (綠)
+      statusBar.classList.add('status-green');
+      statusTitle.innerHTML = '✅ 完美裝載：具備排水與散熱餘裕';
+      statusDesc.innerHTML = '幾何干涉檢查通過。空間充裕，符合物理安全規範。';
+    }
+
+    // 更新數據面板
+    statusMetrics.innerHTML = `管槽極限 [寬: ${duct.w}mm / 深: ${duct.h}mm] | 物件拓樸 [寬: ${totalW}mm / 高: ${totalH}mm]`;
+  }
+
+  // 初次載入執行
+  updateSimulation();
+
+</script>
+</body>
+</html>
